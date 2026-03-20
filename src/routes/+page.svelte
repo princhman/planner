@@ -356,7 +356,7 @@
 									disabled={isCompleting}
 									class="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-700 disabled:opacity-50"
 								>
-									{isCompleting ? "Saving..." : "Complete"}
+									{isCompleting ? "Saving..." : "Complete now"}
 								</button>
 							</div>
 						</div>

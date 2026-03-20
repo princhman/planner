@@ -9,12 +9,15 @@
 	import {
 		CONFIDENCE_LEVELS,
 		CONFIDENCE_COLORS,
+		CONFIDENCE_LABELS,
+		CONFIDENCE_DESCRIPTIONS,
 	} from "$lib/types.js";
 	import type { Subject, ConfidenceLevel, Topic } from "$lib/types.js";
 	import PageHeader from "$lib/components/PageHeader.svelte";
 	import ConfidenceBar from "$lib/components/ConfidenceBar.svelte";
 	import ImportanceDots from "$lib/components/ImportanceDots.svelte";
-	import { ChevronRight } from "lucide-svelte";
+	import Tooltip from "$lib/components/Tooltip.svelte";
+	import { ChevronDown, ChevronRight } from "lucide-svelte";
 
 	const subjectId = $derived($page.params.subjectId ?? "");
 
@@ -72,6 +75,31 @@
 	}
 
 	let collapsedIds = $state<Set<string>>(loadCollapsed());
+
+	function legendCollapsedKey(): string {
+		return `planner_collapsed_ratings_legend_${subjectId}`;
+	}
+
+	function loadLegendCollapsed(): boolean {
+		try {
+			return localStorage.getItem(legendCollapsedKey()) === "true";
+		} catch {
+			return false;
+		}
+	}
+
+	function saveLegendCollapsed(value: boolean) {
+		try {
+			localStorage.setItem(legendCollapsedKey(), String(value));
+		} catch { /* ignore */ }
+	}
+
+	let legendCollapsed = $state(loadLegendCollapsed());
+
+	function toggleLegendCollapse() {
+		legendCollapsed = !legendCollapsed;
+		saveLegendCollapsed(legendCollapsed);
+	}
 
 	// Which topics have children
 	const parentIds = $derived(() => {
@@ -166,10 +194,15 @@
 			<div class="flex h-2 w-full overflow-hidden rounded-full bg-neutral-100">
 				{#each confidenceDistribution() as seg}
 					{#if seg.percent > 0}
-						<div
-							class="h-full {CONFIDENCE_COLORS[seg.level]}"
+						<Tooltip
+							content={`${CONFIDENCE_LABELS[seg.level]}: ${seg.count} topic${seg.count === 1 ? "" : "s"}. ${CONFIDENCE_DESCRIPTIONS[seg.level]}`}
+							class="h-full"
 							style="width: {seg.percent}%"
-						></div>
+						>
+							<div
+								class="h-full w-full {CONFIDENCE_COLORS[seg.level]}"
+							></div>
+						</Tooltip>
 					{/if}
 				{/each}
 			</div>
@@ -186,13 +219,52 @@
 			</div>
 		</div>
 
-		<!-- Legend (compact) -->
-		<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-neutral-400">
-			<span class="font-medium text-neutral-500">Confidence:</span>
-			<span>left = not started</span>
-			<span>right = exam ready</span>
-			<span class="ml-2 font-medium text-neutral-500">Dots:</span>
-			<span>importance 1-5</span>
+		<!-- Legend -->
+		<div class="rounded-xl border border-neutral-200 bg-neutral-50/70">
+			<button
+				type="button"
+				class="flex w-full items-start justify-between gap-3 p-3 text-left"
+				onclick={toggleLegendCollapse}
+				aria-expanded={!legendCollapsed}
+				aria-controls="understanding-legend"
+			>
+				<div>
+					<p class="text-sm font-medium text-neutral-800">Understanding scale</p>
+					<p class="mt-1 text-[11px] text-neutral-500">
+						Grey means not started. The colours move from early familiarity to exam-ready.
+					</p>
+				</div>
+				<ChevronDown
+					size={16}
+					class="mt-0.5 shrink-0 text-neutral-400 transition-transform duration-150 {legendCollapsed ? '-rotate-90' : ''}"
+				/>
+			</button>
+			{#if !legendCollapsed}
+				<div id="understanding-legend" class="border-t border-neutral-200 px-3 pb-3 pt-3">
+					<div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-neutral-500">
+						<span>Grey = not started yet.</span>
+						<span>Amber/yellow = you know it, but not strongly.</span>
+						<span>Green = you can answer questions with confidence.</span>
+						<span>Dots = importance from 1 to 5.</span>
+					</div>
+					<div class="grid gap-2 sm:grid-cols-2">
+						{#each CONFIDENCE_LEVELS as level}
+							<Tooltip
+								content={`${CONFIDENCE_LABELS[level]}: ${CONFIDENCE_DESCRIPTIONS[level]}`}
+								class="w-full"
+							>
+								<div class="flex items-start gap-2 rounded-lg bg-white/80 px-3 py-2 ring-1 ring-neutral-200/80">
+									<span class="mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full {CONFIDENCE_COLORS[level]}"></span>
+									<div class="min-w-0">
+										<p class="text-xs font-medium text-neutral-800">{CONFIDENCE_LABELS[level]}</p>
+										<p class="text-xs leading-5 text-neutral-500">{CONFIDENCE_DESCRIPTIONS[level]}</p>
+									</div>
+								</div>
+							</Tooltip>
+						{/each}
+					</div>
+				</div>
+			{/if}
 		</div>
 
 		<!-- Topic tree -->
