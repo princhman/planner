@@ -1,2 +1,36 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
+
+/* Global styles */
+html {
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent content shift on scroll */
+html {
+	overflow-y: scroll;
+}
+
+/* Better focus styles */
+:focus-visible {
+	outline: 2px solid #404040;
+	outline-offset: 2px;
+	border-radius: 4px;
+}
+
+/* Smooth page transitions */
+main {
+	animation: fadeIn 150ms ease-out;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0.8;
+		transform: translateY(4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}

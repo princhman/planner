@@ -1,0 +1,277 @@
+<script lang="ts">
+	import { page } from "$app/stores";
+	import { onMount } from "svelte";
+	import {
+		getRepository,
+		refreshTopics,
+		getTopicsForSubject,
+	} from "$lib/stores/planner-store.svelte.js";
+	import {
+		CONFIDENCE_LEVELS,
+		CONFIDENCE_COLORS,
+	} from "$lib/types.js";
+	import type { Subject, ConfidenceLevel, Topic } from "$lib/types.js";
+	import PageHeader from "$lib/components/PageHeader.svelte";
+	import ConfidenceBar from "$lib/components/ConfidenceBar.svelte";
+	import ImportanceDots from "$lib/components/ImportanceDots.svelte";
+	import { ChevronRight } from "lucide-svelte";
+
+	const subjectId = $derived($page.params.subjectId ?? "");
+
+	let subject = $state<Subject | null>(null);
+	let topics = $derived(getTopicsForSubject(subjectId));
+
+	onMount(async () => {
+		subject = await getRepository().getSubject(subjectId);
+		await refreshTopics(subjectId);
+	});
+
+	async function setConfidence(topicId: string, confidence: ConfidenceLevel) {
+		await getRepository().updateTopicRating({ topicId, confidence });
+		await refreshTopics(subjectId);
+	}
+
+	async function setImportance(topicId: string, importance: 1 | 2 | 3 | 4 | 5) {
+		await getRepository().updateTopicRating({ topicId, importance });
+		await refreshTopics(subjectId);
+	}
+
+	// Summary: proportion at each confidence level
+	const confidenceDistribution = $derived(() => {
+		if (topics.length === 0) return [];
+		const counts = new Map<ConfidenceLevel, number>();
+		for (const level of CONFIDENCE_LEVELS) counts.set(level, 0);
+		for (const t of topics) counts.set(t.confidence, (counts.get(t.confidence) ?? 0) + 1);
+		return CONFIDENCE_LEVELS.map((level) => ({
+			level,
+			count: counts.get(level) ?? 0,
+			percent: ((counts.get(level) ?? 0) / topics.length) * 100,
+		}));
+	});
+
+	const ratedCount = $derived(topics.filter((t) => t.confidence !== "not_started").length);
+
+	// ── Foldable state (persisted per subject) ──
+
+	const COLLAPSED_KEY = `planner_collapsed_ratings_${subjectId}`;
+
+	function loadCollapsed(): Set<string> {
+		try {
+			const raw = localStorage.getItem(COLLAPSED_KEY);
+			if (raw) return new Set(JSON.parse(raw));
+		} catch { /* ignore */ }
+		return new Set();
+	}
+
+	function saveCollapsed(ids: Set<string>) {
+		try {
+			localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...ids]));
+		} catch { /* ignore */ }
+	}
+
+	let collapsedIds = $state<Set<string>>(loadCollapsed());
+
+	// Which topics have children
+	const parentIds = $derived(() => {
+		const ids = new Set<string>();
+		for (const t of topics) {
+			if (t.parentTopicId) {
+				ids.add(t.parentTopicId);
+			}
+		}
+		return ids;
+	});
+
+	// Quick lookup map
+	const topicById = $derived(() => {
+		const map = new Map<string, Topic>();
+		for (const t of topics) map.set(t.id, t);
+		return map;
+	});
+
+	function isParent(topicId: string): boolean {
+		return parentIds().has(topicId);
+	}
+
+	function toggleCollapse(topicId: string) {
+		const next = new Set(collapsedIds);
+		if (next.has(topicId)) {
+			next.delete(topicId);
+		} else {
+			next.add(topicId);
+		}
+		collapsedIds = next;
+		saveCollapsed(next);
+	}
+
+	function isVisible(topic: Topic): boolean {
+		let currentParentId = topic.parentTopicId;
+		const map = topicById();
+		while (currentParentId) {
+			if (collapsedIds.has(currentParentId)) return false;
+			const parent = map.get(currentParentId);
+			currentParentId = parent?.parentTopicId ?? null;
+		}
+		return true;
+	}
+
+	// Check if a topic is the last child of its parent (for tree line rendering)
+	function isLastChild(topic: Topic, index: number): boolean {
+		for (let j = index + 1; j < topics.length; j++) {
+			const next = topics[j];
+			if (next.depth < topic.depth) return true; // went up, so we were last
+			if (next.depth === topic.depth) return true; // sibling found means we're last before it
+			// next.depth > topic.depth means it's our child, continue
+		}
+		return true; // end of list
+	}
+
+	// Check if topic at a given depth level has more siblings below it
+	// Used for drawing continuous vertical tree lines
+	function hasMoreSiblingsAtDepth(index: number, targetDepth: number): boolean {
+		for (let j = index + 1; j < topics.length; j++) {
+			const t = topics[j];
+			if (t.depth < targetDepth) return false; // went above target depth
+			if (t.depth === targetDepth) return true; // found a sibling
+		}
+		return false;
+	}
+</script>
+
+<PageHeader title={subject?.name ?? "Rate Topics"} backHref="/">
+	<a
+		href="/subjects/{subjectId}/topics"
+		class="text-xs text-neutral-400 transition-colors hover:text-neutral-700"
+	>
+		Edit topics
+	</a>
+</PageHeader>
+
+{#if topics.length === 0}
+	<div class="py-16 text-center">
+		<p class="text-sm text-neutral-400">No topics to rate.</p>
+		<a
+			href="/subjects/{subjectId}/topics"
+			class="mt-4 inline-block rounded-lg bg-neutral-900 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-700"
+		>
+			Import topics
+		</a>
+	</div>
+{:else}
+	<div class="space-y-5">
+		<!-- Summary bar -->
+		<div>
+			<div class="flex h-2 w-full overflow-hidden rounded-full bg-neutral-100">
+				{#each confidenceDistribution() as seg}
+					{#if seg.percent > 0}
+						<div
+							class="h-full {CONFIDENCE_COLORS[seg.level]}"
+							style="width: {seg.percent}%"
+						></div>
+					{/if}
+				{/each}
+			</div>
+			<div class="mt-1.5 flex items-center gap-3 text-xs text-neutral-400">
+				<span>{ratedCount}/{topics.length} rated</span>
+				{#each confidenceDistribution() as seg}
+					{#if seg.count > 0 && seg.level !== "not_started"}
+						<span class="flex items-center gap-1">
+							<span class="inline-block h-1.5 w-1.5 rounded-full {CONFIDENCE_COLORS[seg.level]}"></span>
+							{seg.count}
+						</span>
+					{/if}
+				{/each}
+			</div>
+		</div>
+
+		<!-- Legend (compact) -->
+		<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-neutral-400">
+			<span class="font-medium text-neutral-500">Confidence:</span>
+			<span>left = not started</span>
+			<span>right = exam ready</span>
+			<span class="ml-2 font-medium text-neutral-500">Dots:</span>
+			<span>importance 1-5</span>
+		</div>
+
+		<!-- Topic tree -->
+		<div>
+			{#each topics as topic, i}
+				{@const visible = isVisible(topic)}
+				{@const hasChildren = isParent(topic.id)}
+				{@const isTopLevel = topic.depth === 1}
+				{#if visible}
+					{#if isTopLevel && i > 0}
+						<div class="my-2 border-t border-neutral-100"></div>
+					{/if}
+					<div
+						class="group flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3"
+					>
+						<!-- Tree structure + name -->
+						<div class="flex min-w-0 flex-1 items-center">
+							<!-- Tree lines for indentation -->
+							{#if topic.depth > 1}
+								<div class="flex shrink-0 items-center self-stretch">
+									{#each Array(topic.depth - 1) as _, d}
+										{@const lineDepth = d + 1}
+										{@const isLastAtThisDepth = d === topic.depth - 2}
+										<div class="relative flex h-full w-5 items-center justify-center">
+											{#if isLastAtThisDepth}
+												<!-- Branch: ├── or └── -->
+												<div class="absolute left-1/2 top-0 h-1/2 w-px {hasMoreSiblingsAtDepth(i, topic.depth) ? '' : ''} bg-neutral-200"></div>
+												<div class="absolute left-1/2 top-1/2 h-px w-[10px] bg-neutral-200"></div>
+												{#if hasMoreSiblingsAtDepth(i, topic.depth)}
+													<!-- ├── continuing line below -->
+													<div class="absolute left-1/2 top-1/2 h-1/2 w-px bg-neutral-200"></div>
+												{/if}
+											{:else}
+												<!-- Vertical pass-through: │ -->
+												{#if hasMoreSiblingsAtDepth(i, lineDepth + 1)}
+													<div class="absolute left-1/2 top-0 h-full w-px bg-neutral-200"></div>
+												{/if}
+											{/if}
+										</div>
+									{/each}
+								</div>
+							{/if}
+
+							<!-- Chevron for parents / spacer for leaves -->
+							{#if hasChildren}
+								<button
+									onclick={() => toggleCollapse(topic.id)}
+									class="flex h-6 w-6 shrink-0 items-center justify-center rounded text-neutral-300 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+									aria-label={collapsedIds.has(topic.id) ? "Expand" : "Collapse"}
+								>
+									<ChevronRight
+										size={14}
+										class="transition-transform duration-150 {collapsedIds.has(topic.id) ? '' : 'rotate-90'}"
+									/>
+								</button>
+							{:else}
+								<div class="w-6 shrink-0"></div>
+							{/if}
+
+							<!-- Code + title -->
+							<span class="w-5 shrink-0 text-right font-mono text-[11px] text-neutral-300">{topic.code.split('.').pop()}</span>
+							<span class="ml-1.5 truncate text-sm {isTopLevel ? 'font-semibold text-neutral-900' : topic.depth === 2 ? 'font-medium text-neutral-700' : 'text-neutral-600'}">
+								{topic.title}
+							</span>
+						</div>
+
+						<!-- Controls -->
+						<div class="flex shrink-0 items-center gap-3 pl-11 sm:pl-0">
+							<ConfidenceBar
+								value={topic.confidence}
+								onchange={(level) => setConfidence(topic.id, level)}
+							/>
+							<ImportanceDots
+								value={topic.importance}
+								onchange={(level) => setImportance(topic.id, level)}
+							/>
+						</div>
+					</div>
+				{/if}
+			{/each}
+		</div>
+
+	</div>
+{/if}

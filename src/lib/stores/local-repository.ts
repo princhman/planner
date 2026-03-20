@@ -1,0 +1,182 @@
+import type { PlannerRepository, CreateSubjectInput, UpdateSubjectInput, ImportTopicsInput, UpdateTopicRatingInput, CompleteSessionInput } from "$lib/repository.js";
+import type { Subject, Topic, StudySession, RecommendationRequest, Recommendation } from "$lib/types.js";
+import { readSubjects, writeSubjects, readTopics, writeTopics, readStudySessions, writeStudySessions } from "./local-storage.js";
+import { generateId, nowTimestamp } from "$lib/utils.js";
+import { computeRecommendation } from "$lib/engine.js";
+
+/**
+ * Local browser-storage backed implementation of PlannerRepository.
+ * All data lives in localStorage.
+ */
+export class LocalRepository implements PlannerRepository {
+	// Subjects
+
+	async listSubjects(): Promise<Subject[]> {
+		return readSubjects();
+	}
+
+	async getSubject(id: string): Promise<Subject | null> {
+		return readSubjects().find((s) => s.id === id) ?? null;
+	}
+
+	async createSubject(input: CreateSubjectInput): Promise<Subject> {
+		const subjects = readSubjects();
+		const now = nowTimestamp();
+		const subject: Subject = {
+			id: generateId(),
+			name: input.name,
+			examDate: input.examDate,
+			defaultSessionMinutes: input.defaultSessionMinutes,
+			createdAt: now,
+			updatedAt: now,
+		};
+		subjects.push(subject);
+		writeSubjects(subjects);
+		return subject;
+	}
+
+	async updateSubject(input: UpdateSubjectInput): Promise<Subject> {
+		const subjects = readSubjects();
+		const idx = subjects.findIndex((s) => s.id === input.id);
+		if (idx === -1) throw new Error(`Subject not found: ${input.id}`);
+		const subject = subjects[idx];
+		if (input.name !== undefined) subject.name = input.name;
+		if (input.examDate !== undefined) subject.examDate = input.examDate;
+		if (input.defaultSessionMinutes !== undefined) subject.defaultSessionMinutes = input.defaultSessionMinutes;
+		subject.updatedAt = nowTimestamp();
+		subjects[idx] = subject;
+		writeSubjects(subjects);
+		return subject;
+	}
+
+	async deleteSubject(id: string): Promise<void> {
+		writeSubjects(readSubjects().filter((s) => s.id !== id));
+		// Also delete related topics and sessions
+		writeTopics(readTopics().filter((t) => t.subjectId !== id));
+		writeStudySessions(readStudySessions().filter((s) => s.subjectId !== id));
+	}
+
+	// Topics
+
+	async listTopics(subjectId: string): Promise<Topic[]> {
+		return readTopics().filter((t) => t.subjectId === subjectId);
+	}
+
+	async getTopic(id: string): Promise<Topic | null> {
+		return readTopics().find((t) => t.id === id) ?? null;
+	}
+
+	async importTopics(input: ImportTopicsInput): Promise<Topic[]> {
+		const allTopics = readTopics();
+		const now = nowTimestamp();
+
+		// Map from temporary code-based references to real IDs
+		const codeToId = new Map<string, string>();
+
+		const newTopics: Topic[] = input.topics.map((t) => {
+			const id = generateId();
+			codeToId.set(t.code, id);
+
+			// Resolve parentTopicId from code
+			let parentTopicId: string | null = null;
+			if (t.parentTopicId) {
+				parentTopicId = codeToId.get(t.parentTopicId) ?? null;
+			}
+
+			return {
+				id,
+				subjectId: input.subjectId,
+				code: t.code,
+				title: t.title,
+				depth: t.depth,
+				parentTopicId,
+				importance: 3 as const,
+				confidence: "not_started" as const,
+				lastStudiedAt: null,
+				lastRecallAt: null,
+				createdAt: now,
+				updatedAt: now,
+			};
+		});
+
+		writeTopics([...allTopics, ...newTopics]);
+		return newTopics;
+	}
+
+	async updateTopicRating(input: UpdateTopicRatingInput): Promise<Topic> {
+		const topics = readTopics();
+		const idx = topics.findIndex((t) => t.id === input.topicId);
+		if (idx === -1) throw new Error(`Topic not found: ${input.topicId}`);
+		const topic = topics[idx];
+		if (input.confidence !== undefined) topic.confidence = input.confidence;
+		if (input.importance !== undefined) topic.importance = input.importance;
+		topic.updatedAt = nowTimestamp();
+		topics[idx] = topic;
+		writeTopics(topics);
+		return topic;
+	}
+
+	async deleteTopicsBySubject(subjectId: string): Promise<void> {
+		writeTopics(readTopics().filter((t) => t.subjectId !== subjectId));
+	}
+
+	// Recommendations
+
+	async getRecommendation(input: RecommendationRequest): Promise<Recommendation | null> {
+		const subjects = input.subjectId
+			? readSubjects().filter((s) => s.id === input.subjectId)
+			: readSubjects();
+
+		const allTopics = readTopics();
+		const relevantTopics = subjects.length > 0
+			? allTopics.filter((t) => subjects.some((s) => s.id === t.subjectId))
+			: allTopics;
+
+		return computeRecommendation(relevantTopics, subjects, input);
+	}
+
+	// Study Sessions
+
+	async listStudySessions(subjectId?: string): Promise<StudySession[]> {
+		const sessions = readStudySessions();
+		return subjectId ? sessions.filter((s) => s.subjectId === subjectId) : sessions;
+	}
+
+	async completeStudySession(input: CompleteSessionInput): Promise<StudySession> {
+		const sessions = readStudySessions();
+		const now = nowTimestamp();
+
+		// Get topic to record confidence before
+		const topic = readTopics().find((t) => t.id === input.topicId);
+		if (!topic) throw new Error(`Topic not found: ${input.topicId}`);
+
+		const session: StudySession = {
+			id: generateId(),
+			subjectId: input.subjectId,
+			topicId: input.topicId,
+			actionType: input.actionType as StudySession["actionType"],
+			plannedMinutes: input.plannedMinutes,
+			completedAt: now,
+			confidenceBefore: topic.confidence,
+			confidenceAfter: input.confidenceAfter,
+		};
+
+		sessions.push(session);
+		writeStudySessions(sessions);
+
+		// Update topic: lastStudiedAt, lastRecallAt, and confidence
+		const topics = readTopics();
+		const topicIdx = topics.findIndex((t) => t.id === input.topicId);
+		if (topicIdx !== -1) {
+			topics[topicIdx].lastStudiedAt = now;
+			topics[topicIdx].lastRecallAt = now;
+			if (input.confidenceAfter) {
+				topics[topicIdx].confidence = input.confidenceAfter;
+			}
+			topics[topicIdx].updatedAt = now;
+			writeTopics(topics);
+		}
+
+		return session;
+	}
+}
