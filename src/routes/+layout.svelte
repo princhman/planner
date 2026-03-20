@@ -3,12 +3,14 @@
 	import favicon from "$lib/assets/favicon.svg";
 	import { initializePlannerStore } from "$lib/stores/planner-store.svelte.js";
 	import { initAuthStore } from "$lib/stores/auth-store.svelte.js";
+	import { initSettingsStore } from "$lib/stores/settings-store.svelte.js";
 	import { onMount } from "svelte";
 
 	let { children } = $props();
 
 	onMount(() => {
 		initAuthStore();
+		initSettingsStore();
 		initializePlannerStore();
 	});
 </script>

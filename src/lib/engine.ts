@@ -71,11 +71,12 @@ export function computeRecommendation(
 	const subjectMap = new Map(subjects.map((s) => [s.id, s]));
 	const now = request.now;
 	const availableMinutes = request.availableMinutes;
+	const importanceEnabled = request.importanceEnabled ?? true;
 
 	// Score each topic
 	const scored = topics.map((topic) => {
 		const subject = subjectMap.get(topic.subjectId);
-		const score = computeUrgencyScore(topic, subject, now);
+		const score = computeUrgencyScore(topic, subject, now, importanceEnabled);
 		return { topic, subject, score };
 	});
 
@@ -133,6 +134,7 @@ function computeUrgencyScore(
 	topic: Topic,
 	subject: Subject | undefined,
 	now: number,
+	importanceEnabled: boolean,
 ): number {
 	let score = 0;
 
@@ -142,7 +144,9 @@ function computeUrgencyScore(
 	score += confidenceUrgency;
 
 	// 2. Higher importance = higher urgency (1-5 scale → 0-20 range)
-	score += topic.importance * 4;
+	if (importanceEnabled) {
+		score += topic.importance * 4;
+	}
 
 	// 3. Never-studied boost
 	if (topic.lastStudiedAt === null) {

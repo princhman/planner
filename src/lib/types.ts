@@ -41,6 +41,7 @@ export type RecommendationRequest = {
   subjectId?: string | null;
   availableMinutes: number;
   now: number;
+  importanceEnabled?: boolean;
 };
 
 export type Recommendation = {
@@ -74,7 +75,7 @@ export const CONFIDENCE_LABELS: Record<ConfidenceLevel, string> = {
   not_started: "Not started",
   recognize: "Recognise it",
   explain: "Can explain it",
-  standard_questions: "Can do dtandard questions",
+  standard_questions: "Can do some questions",
   exam_ready: "Exam ready!",
 };
 

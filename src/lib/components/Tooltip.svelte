@@ -50,7 +50,7 @@
 	{#if open}
 		<div
 			role="tooltip"
-			class="pointer-events-none absolute z-50 max-w-64 rounded-md bg-neutral-900 px-2.5 py-1.5 text-xs leading-5 text-white shadow-lg {positionClass}"
+			class="pointer-events-none absolute z-50 w-max max-w-80 whitespace-normal rounded-md bg-neutral-900 px-3 py-2 text-xs leading-4 text-white shadow-lg {positionClass}"
 		>
 			{content}
 		</div>

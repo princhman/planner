@@ -23,6 +23,11 @@
 	} from "$lib/stores/local-storage.js";
 	import { ConvexRepository } from "$lib/stores/convex-repository.js";
 	import { LocalRepository } from "$lib/stores/local-repository.js";
+	import {
+		getPlannerSettings,
+		initSettingsStore,
+		setImportanceEnabled,
+	} from "$lib/stores/settings-store.svelte.js";
 	import { getConvexUrl } from "$lib/convex-client.js";
 	import { ConvexClient } from "convex/browser";
 	import { onMount } from "svelte";
@@ -37,11 +42,13 @@
 
 	let isLoggedIn = $derived(getIsAuthenticated());
 	let userEmail = $derived(getAuthUserEmail());
+	let plannerSettings = $derived(getPlannerSettings());
 
 	let convexUrl = $state("");
 
 	onMount(() => {
 		initAuthStore();
+		initSettingsStore();
 		convexUrl = getConvexUrl();
 	});
 
@@ -91,6 +98,7 @@
 				});
 				setAuthUser(userId, email.trim());
 			}
+			initSettingsStore();
 
 			await handlePostLogin(client, api);
 		} catch (err) {
@@ -160,6 +168,7 @@
 
 	async function handleSignOut() {
 		clearAuth();
+		initSettingsStore();
 		setRepository(new LocalRepository());
 		await initializePlannerStore();
 		goto("/");
@@ -177,6 +186,29 @@
 				Your data is synced to the cloud.
 			</p>
 		</div>
+		<div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-neutral-100">
+			<p class="text-xs text-neutral-400">Preferences</p>
+			<div class="mt-3 flex items-start justify-between gap-4">
+				<div>
+					<p class="text-sm font-medium text-neutral-900">Use importance ratings</p>
+					<p class="mt-1 text-xs leading-5 text-neutral-500">
+						When disabled, importance dots are hidden and recommendations ignore importance.
+					</p>
+				</div>
+				<button
+					type="button"
+					role="switch"
+					aria-checked={plannerSettings.importanceEnabled}
+					aria-label="Toggle importance ratings"
+					onclick={() => setImportanceEnabled(!plannerSettings.importanceEnabled)}
+					class="relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors {plannerSettings.importanceEnabled ? 'bg-neutral-900' : 'bg-neutral-300'}"
+				>
+					<span
+						class="inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform {plannerSettings.importanceEnabled ? 'translate-x-5' : 'translate-x-0.5'}"
+					></span>
+				</button>
+			</div>
+		</div>
 		<button
 			onclick={handleSignOut}
 			class="text-sm text-neutral-400 transition-colors hover:text-neutral-700"
@@ -189,6 +221,30 @@
 	<p class="text-sm text-neutral-400">
 		Your planner works locally without an account. Create one to sync across devices.
 	</p>
+
+	<div class="mt-5 rounded-xl bg-white p-5 shadow-sm ring-1 ring-neutral-100">
+		<p class="text-xs text-neutral-400">Preferences</p>
+		<div class="mt-3 flex items-start justify-between gap-4">
+			<div>
+				<p class="text-sm font-medium text-neutral-900">Use importance ratings</p>
+				<p class="mt-1 text-xs leading-5 text-neutral-500">
+					This is saved in this browser until you sign in to an account.
+				</p>
+			</div>
+			<button
+				type="button"
+				role="switch"
+				aria-checked={plannerSettings.importanceEnabled}
+				aria-label="Toggle importance ratings"
+				onclick={() => setImportanceEnabled(!plannerSettings.importanceEnabled)}
+				class="relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors {plannerSettings.importanceEnabled ? 'bg-neutral-900' : 'bg-neutral-300'}"
+			>
+				<span
+					class="inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform {plannerSettings.importanceEnabled ? 'translate-x-5' : 'translate-x-0.5'}"
+				></span>
+			</button>
+		</div>
+	</div>
 
 	{#if !convexUrl}
 		<div class="mt-5 rounded-xl bg-amber-50 p-4 ring-1 ring-amber-200">
