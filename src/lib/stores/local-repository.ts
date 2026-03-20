@@ -1,4 +1,4 @@
-import type { PlannerRepository, CreateSubjectInput, UpdateSubjectInput, ImportTopicsInput, UpdateTopicRatingInput, CompleteSessionInput } from "$lib/repository.js";
+import type { PlannerRepository, CreateSubjectInput, UpdateSubjectInput, ImportTopicsInput, UpdateTopicRatingInput, UpdateTopicInput, ReorderTopicsInput, ReorganizeTopicsInput, CompleteSessionInput } from "$lib/repository.js";
 import type { Subject, Topic, StudySession, RecommendationRequest, Recommendation } from "$lib/types.js";
 import { readSubjects, writeSubjects, readTopics, writeTopics, readStudySessions, writeStudySessions } from "./local-storage.js";
 import { generateId, nowTimestamp } from "$lib/utils.js";
@@ -114,6 +114,89 @@ export class LocalRepository implements PlannerRepository {
 		topics[idx] = topic;
 		writeTopics(topics);
 		return topic;
+	}
+
+	async updateTopic(input: UpdateTopicInput): Promise<Topic> {
+		const topics = readTopics();
+		const idx = topics.findIndex((t) => t.id === input.topicId);
+		if (idx === -1) throw new Error(`Topic not found: ${input.topicId}`);
+		const topic = topics[idx];
+		if (input.title !== undefined) topic.title = input.title;
+		if (input.code !== undefined) topic.code = input.code;
+		topic.updatedAt = nowTimestamp();
+		topics[idx] = topic;
+		writeTopics(topics);
+		return topic;
+	}
+
+	async reorderTopics(input: ReorderTopicsInput): Promise<Topic[]> {
+		const allTopics = readTopics();
+		const subjectTopics = allTopics.filter((t) => t.subjectId === input.subjectId);
+		const otherTopics = allTopics.filter((t) => t.subjectId !== input.subjectId);
+
+		// Build a map for quick lookup
+		const topicMap = new Map<string, Topic>();
+		for (const t of subjectTopics) topicMap.set(t.id, t);
+
+		// Reorder based on provided ID order
+		const reordered: Topic[] = [];
+		for (const id of input.topicIds) {
+			const topic = topicMap.get(id);
+			if (topic) reordered.push(topic);
+		}
+
+		// Include any topics not in the reorder list (shouldn't happen but be safe)
+		for (const t of subjectTopics) {
+			if (!input.topicIds.includes(t.id)) reordered.push(t);
+		}
+
+		writeTopics([...otherTopics, ...reordered]);
+		return reordered;
+	}
+
+	async reorganizeTopics(input: ReorganizeTopicsInput): Promise<Topic[]> {
+		const allTopics = readTopics();
+		const otherTopics = allTopics.filter((t) => t.subjectId !== input.subjectId);
+		const topicMap = new Map<string, Topic>();
+		for (const t of allTopics.filter((t) => t.subjectId === input.subjectId)) {
+			topicMap.set(t.id, t);
+		}
+
+		const now = nowTimestamp();
+		const reordered: Topic[] = [];
+		for (const update of input.topics) {
+			const existing = topicMap.get(update.topicId);
+			if (!existing) continue;
+			reordered.push({
+				...existing,
+				code: update.code,
+				depth: update.depth,
+				parentTopicId: update.parentTopicId,
+				updatedAt: now,
+			});
+		}
+
+		writeTopics([...otherTopics, ...reordered]);
+		return reordered;
+	}
+
+	async deleteTopic(topicId: string): Promise<void> {
+		const topics = readTopics();
+		const topic = topics.find((t) => t.id === topicId);
+		if (!topic) return;
+		// Delete the topic and all its children
+		const idsToDelete = new Set<string>([topicId]);
+		let changed = true;
+		while (changed) {
+			changed = false;
+			for (const t of topics) {
+				if (t.parentTopicId && idsToDelete.has(t.parentTopicId) && !idsToDelete.has(t.id)) {
+					idsToDelete.add(t.id);
+					changed = true;
+				}
+			}
+		}
+		writeTopics(topics.filter((t) => !idsToDelete.has(t.id)));
 	}
 
 	async deleteTopicsBySubject(subjectId: string): Promise<void> {

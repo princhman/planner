@@ -14,6 +14,9 @@ import type {
 	UpdateSubjectInput,
 	ImportTopicsInput,
 	UpdateTopicRatingInput,
+	UpdateTopicInput,
+	ReorderTopicsInput,
+	ReorganizeTopicsInput,
 	CompleteSessionInput,
 } from "$lib/repository.js";
 import type {
@@ -148,6 +151,58 @@ export class ConvexRepository implements PlannerRepository {
 			userId: this.userId,
 		});
 		return this.docToTopic(doc);
+	}
+
+	async updateTopic(input: UpdateTopicInput): Promise<Topic> {
+		await this.client.mutation(this.api.topics.update, {
+			id: input.topicId,
+			userId: this.userId,
+			title: input.title,
+			code: input.code,
+		});
+		const doc = await this.client.query(this.api.topics.get, {
+			id: input.topicId,
+			userId: this.userId,
+		});
+		return this.docToTopic(doc);
+	}
+
+	async reorderTopics(input: ReorderTopicsInput): Promise<Topic[]> {
+		await this.client.mutation(this.api.topics.reorder, {
+			userId: this.userId,
+			subjectId: input.subjectId,
+			topicIds: input.topicIds,
+		});
+		const docs = await this.client.query(this.api.topics.listBySubject, {
+			subjectId: input.subjectId,
+			userId: this.userId,
+		});
+		return docs.map(this.docToTopic);
+	}
+
+	async reorganizeTopics(input: ReorganizeTopicsInput): Promise<Topic[]> {
+		await this.client.mutation(this.api.topics.reorganize, {
+			userId: this.userId,
+			subjectId: input.subjectId,
+			topics: input.topics.map((t) => ({
+				id: t.topicId,
+				code: t.code,
+				depth: t.depth,
+				parentTopicId: t.parentTopicId ?? undefined,
+			})),
+		});
+		const docs = await this.client.query(this.api.topics.listBySubject, {
+			subjectId: input.subjectId,
+			userId: this.userId,
+		});
+		return docs.map(this.docToTopic);
+	}
+
+	async deleteTopic(topicId: string): Promise<void> {
+		await this.client.mutation(this.api.topics.remove, {
+			id: topicId,
+			userId: this.userId,
+		});
 	}
 
 	async deleteTopicsBySubject(subjectId: string): Promise<void> {

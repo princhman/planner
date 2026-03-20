@@ -53,11 +53,13 @@
 
 	// ── Foldable state (persisted per subject) ──
 
-	const COLLAPSED_KEY = `planner_collapsed_ratings_${subjectId}`;
+	function collapsedKey(): string {
+		return `planner_collapsed_ratings_${subjectId}`;
+	}
 
 	function loadCollapsed(): Set<string> {
 		try {
-			const raw = localStorage.getItem(COLLAPSED_KEY);
+			const raw = localStorage.getItem(collapsedKey());
 			if (raw) return new Set(JSON.parse(raw));
 		} catch { /* ignore */ }
 		return new Set();
@@ -65,7 +67,7 @@
 
 	function saveCollapsed(ids: Set<string>) {
 		try {
-			localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...ids]));
+			localStorage.setItem(collapsedKey(), JSON.stringify([...ids]));
 		} catch { /* ignore */ }
 	}
 
@@ -140,10 +142,10 @@
 
 <PageHeader title={subject?.name ?? "Rate Topics"} backHref="/">
 	<a
-		href="/subjects/{subjectId}/topics"
+		href="/subjects/{subjectId}/edit"
 		class="text-xs text-neutral-400 transition-colors hover:text-neutral-700"
 	>
-		Edit topics
+		Edit
 	</a>
 </PageHeader>
 
@@ -151,7 +153,7 @@
 	<div class="py-16 text-center">
 		<p class="text-sm text-neutral-400">No topics to rate.</p>
 		<a
-			href="/subjects/{subjectId}/topics"
+			href="/subjects/{subjectId}/edit"
 			class="mt-4 inline-block rounded-lg bg-neutral-900 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-700"
 		>
 			Import topics
