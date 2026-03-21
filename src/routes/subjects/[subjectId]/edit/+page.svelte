@@ -363,7 +363,7 @@
         saveError = "";
         try {
             await getRepository().deleteTopic(topicId);
-            await normalizeTopicStructure();
+            await refreshTopics(subjectId);
         } catch (err) {
             saveError =
                 err instanceof Error ? err.message : "Failed to delete topic.";

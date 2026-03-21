@@ -79,7 +79,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="space-y-0" ondrop={handleDrop}>
-	{#each topics as topic, i}
+	{#each topics as topic, i (topic.id)}
 		{@const visible = isVisible(topic)}
 		{@const hasChildren = isParent(topic.id)}
 		{@const isTopLevel = topic.depth === 1}

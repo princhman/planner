@@ -2,7 +2,7 @@
  * Convex-backed implementation of PlannerRepository.
  *
  * This repository is used after login. It communicates with
- * Convex cloud functions via the ConvexClient.
+ * Convex cloud functions via the Convex HTTP client.
  *
  * NOTE: Requires `npx convex dev` to be run first to generate
  * the `_generated/` directory and deploy the schema.
@@ -28,7 +28,7 @@ import type {
 	ConfidenceLevel,
 } from "$lib/types.js";
 import { computeRecommendation } from "$lib/engine.js";
-import type { ConvexClient } from "convex/browser";
+import type { ConvexHttpClient } from "convex/browser";
 import type { Id } from "$convex/_generated/dataModel.js";
 
 /**
@@ -40,7 +40,7 @@ import type { Id } from "$convex/_generated/dataModel.js";
  */
 export class ConvexRepository implements PlannerRepository {
 	constructor(
-		private client: ConvexClient,
+		private client: ConvexHttpClient,
 		private userId: Id<"users">,
 		private api: any,
 	) {}
