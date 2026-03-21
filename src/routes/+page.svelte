@@ -192,7 +192,6 @@
                 previousRecommendationTopicId
             ) {
                 showComplete = false;
-                confidenceAfter = null;
             }
 
             if (recommendation) {
