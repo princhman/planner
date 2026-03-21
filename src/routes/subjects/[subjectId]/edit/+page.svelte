@@ -11,7 +11,9 @@
     import { parseTopicOutline, type ParseResult } from "$lib/topic-parser.js";
     import type { Subject, Topic } from "$lib/types.js";
     import PageHeader from "$lib/components/PageHeader.svelte";
-    import { Pencil, Check, X, Trash2, ChevronRight } from "lucide-svelte";
+    import TopicList from "$lib/components/TopicList.svelte";
+    import TopicOutlinePreview from "$lib/components/TopicOutlinePreview.svelte";
+    import { Pencil } from "lucide-svelte";
 
     const subjectId = $derived($page.params.subjectId ?? "");
 
@@ -328,6 +330,10 @@
         editTopicTitle = "";
     }
 
+    function setEditTopicTitle(value: string) {
+        editTopicTitle = value;
+    }
+
     async function saveTopic(topicId: string) {
         const trimmed = editTopicTitle.trim();
         if (!trimmed) return;
@@ -354,20 +360,13 @@
 
     async function handleDeleteTopic(topicId: string) {
         deletingTopicId = topicId;
+        saveError = "";
         try {
             await getRepository().deleteTopic(topicId);
-            await refreshTopics(subjectId);
-
-            // Clean up collapsed state for deleted topics
-            const currentTopics = getTopicsForSubject(subjectId);
-            const validIds = new Set(currentTopics.map((t) => t.id));
-            const nextCollapsed = new Set(
-                [...collapsedIds].filter((id) => validIds.has(id)),
-            );
-            collapsedIds = nextCollapsed;
-            saveCollapsed(nextCollapsed);
-        } catch {
-            /* ignore */
+            await normalizeTopicStructure();
+        } catch (err) {
+            saveError =
+                err instanceof Error ? err.message : "Failed to delete topic.";
         } finally {
             deletingTopicId = null;
         }
@@ -653,11 +652,6 @@
     {#if topics.length > 0}
         <div class="space-y-3">
             <div class="flex items-center justify-between">
-                <h3
-                    class="text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-400"
-                >
-                    Topics
-                </h3>
                 <div class="flex items-center gap-3">
                     <button
                         onclick={() => (showImporter = !showImporter)}
@@ -671,214 +665,36 @@
                     >
                         Delete all
                     </button>
-                    {#if isSaving}
-                        <span class="text-xs text-neutral-400 dark:text-neutral-400">Saving...</span>
-                    {/if}
                 </div>
             </div>
 
-            <p class="text-[11px] text-neutral-400 dark:text-neutral-400">
-                Drag topics to reorder or nest. Top/bottom edge = sibling,
-                centre = nest inside.
-            </p>
-
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div class="space-y-0" ondrop={handleDrop}>
-                {#each topics as topic, i}
-                    {@const visible = isVisible(topic)}
-                    {@const hasChildren = isParent(topic.id)}
-                    {@const isTopLevel = topic.depth === 1}
-                    {@const isEditing = editingTopicId === topic.id}
-                    {@const isDragged = draggedTopicId === topic.id}
-                    {#if visible}
-                        <!-- Drop line BEFORE -->
-                        {#if showLineBefore(topic.id)}
-                            <div
-                                class="pointer-events-none mx-2 h-0.5 rounded-full bg-blue-400"
-                                style="margin-left: {(topic.depth - 1) * 16 +
-                                    8}px"
-                            ></div>
-                        {/if}
-
-                        <!-- Topic row -->
-                        <!-- svelte-ignore a11y_no_static_element_interactions -->
-                        <div
-                            class="group flex items-center rounded-lg transition-all {isDragged
-                                ? 'opacity-30'
-                                : ''} {dropIndicatorClass(topic.id, 'inside')}"
-                            draggable={!isEditing}
-                            ondragstart={(e) => handleDragStart(e, topic.id)}
-                            ondragover={(e) =>
-                                handleDragOver(
-                                    e,
-                                    topic.id,
-                                    e.currentTarget as HTMLElement,
-                                )}
-                            ondragleave={(e) =>
-                                handleDragLeave(
-                                    e,
-                                    e.currentTarget as HTMLElement,
-                                )}
-                            ondragend={handleDragEnd}
-                            role="listitem"
-                        >
-                            <!-- Drag affordance (the whole row is draggable, but the dots hint it) -->
-                            <div
-                                class="flex h-7 w-5 shrink-0 cursor-grab items-center justify-center"
-                            >
-                                <svg
-                                    class="text-neutral-200 dark:text-neutral-700 transition-colors group-hover:text-neutral-400 dark:group-hover:text-neutral-500"
-                                    width="10"
-                                    height="14"
-                                    viewBox="0 0 10 14"
-                                    fill="currentColor"
-                                >
-                                    <circle cx="3" cy="2" r="1.2" />
-                                    <circle cx="7" cy="2" r="1.2" />
-                                    <circle cx="3" cy="7" r="1.2" />
-                                    <circle cx="7" cy="7" r="1.2" />
-                                    <circle cx="3" cy="12" r="1.2" />
-                                    <circle cx="7" cy="12" r="1.2" />
-                                </svg>
-                            </div>
-
-                            <!-- Tree lines -->
-                            {#if topic.depth > 1}
-                                <div
-                                    class="flex shrink-0 items-center self-stretch"
-                                >
-                                    {#each Array(topic.depth - 1) as _, d}
-                                        {@const isLast = d === topic.depth - 2}
-                                        <div
-                                            class="relative flex h-full w-4 items-center justify-center"
-                                        >
-                                            {#if isLast}
-                                                <div
-                                                    class="absolute left-1/2 top-0 h-1/2 w-px bg-neutral-200 dark:bg-neutral-700"
-                                                ></div>
-                                                <div
-                                                    class="absolute left-1/2 top-1/2 h-px w-[8px] bg-neutral-200 dark:bg-neutral-700"
-                                                ></div>
-                                                {#if hasMoreSiblingsAtDepth(i, topic.depth)}
-                                                    <div
-                                                        class="absolute left-1/2 top-1/2 h-1/2 w-px bg-neutral-200 dark:bg-neutral-700"
-                                                    ></div>
-                                                {/if}
-                                            {:else if hasMoreSiblingsAtDepth(i, d + 2)}
-                                                <div
-                                                    class="absolute left-1/2 top-0 h-full w-px bg-neutral-200 dark:bg-neutral-700"
-                                                ></div>
-                                            {/if}
-                                        </div>
-                                    {/each}
-                                </div>
-                            {/if}
-
-                            <!-- Collapse chevron -->
-                            {#if hasChildren}
-                                <button
-                                    onclick={() => toggleCollapse(topic.id)}
-                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded text-neutral-300 dark:text-neutral-500 transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-neutral-600 dark:hover:text-neutral-200"
-                                    aria-label={collapsedIds.has(topic.id)
-                                        ? "Expand"
-                                        : "Collapse"}
-                                >
-                                    <ChevronRight
-                                        size={14}
-                                        class="transition-transform duration-150 {collapsedIds.has(
-                                            topic.id,
-                                        )
-                                            ? ''
-                                            : 'rotate-90'}"
-                                    />
-                                </button>
-                            {:else}
-                                <div class="w-6 shrink-0"></div>
-                            {/if}
-
-                            <!-- Code badge -->
-                            <span
-                                class="w-6 shrink-0 text-right font-mono text-[11px] text-neutral-300 dark:text-neutral-500"
-                            >
-                                {topic.code.split(".").pop()}
-                            </span>
-
-                            <!-- Title -->
-                            {#if isEditing}
-                                <div
-                                    class="ml-1.5 flex min-w-0 flex-1 items-center gap-1"
-                                >
-                                    <input
-                                        type="text"
-                                        bind:value={editTopicTitle}
-                                        onkeydown={(e) =>
-                                            handleTopicKeydown(e, topic.id)}
-                                        class="min-w-0 flex-1 rounded border-0 bg-white dark:bg-neutral-800 px-2 py-0.5 text-sm ring-1 ring-neutral-300 dark:ring-neutral-600 focus:ring-2 focus:ring-neutral-400 focus:outline-none"
-                                        autofocus
-                                    />
-                                    <button
-                                        onclick={() => saveTopic(topic.id)}
-                                        class="rounded p-1 text-green-500 dark:text-green-400 transition-colors hover:bg-green-50 dark:hover:bg-green-950"
-                                        title="Save"
-                                    >
-                                        <Check size={14} />
-                                    </button>
-                                    <button
-                                        onclick={cancelEditTopic}
-                                        class="rounded p-1 text-neutral-400 dark:text-neutral-400 transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-700"
-                                        title="Cancel"
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                </div>
-                            {:else}
-                                <span
-                                    class="ml-1.5 min-w-0 flex-1 truncate text-sm {isTopLevel
-                                        ? 'font-semibold text-neutral-900 dark:text-white'
-                                        : topic.depth === 2
-                                          ? 'font-medium text-neutral-700 dark:text-neutral-200'
-                                          : 'text-neutral-600 dark:text-neutral-400'}"
-                                >
-                                    {topic.title}
-                                </span>
-
-                                <!-- Hover actions -->
-                                <div
-                                    class="flex shrink-0 items-center gap-0.5 pl-2 opacity-0 transition-opacity group-hover:opacity-100"
-                                >
-                                    <button
-                                        onclick={() => startEditTopic(topic)}
-                                        class="rounded p-1 text-neutral-300 dark:text-neutral-500 transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-neutral-600 dark:hover:text-neutral-200"
-                                        title="Rename"
-                                    >
-                                        <Pencil size={14} />
-                                    </button>
-                                    <button
-                                        onclick={() =>
-                                            handleDeleteTopic(topic.id)}
-                                        disabled={deletingTopicId === topic.id}
-                                        class="rounded p-1 text-neutral-300 dark:text-neutral-500 transition-colors hover:bg-red-50 dark:hover:bg-red-950 hover:text-red-500 dark:hover:text-red-400 disabled:opacity-50"
-                                        title="Delete{hasChildren
-                                            ? ' (with children)'
-                                            : ''}"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                            {/if}
-                        </div>
-
-                        <!-- Drop line AFTER -->
-                        {#if showLineAfter(topic.id)}
-                            <div
-                                class="pointer-events-none mx-2 h-0.5 rounded-full bg-blue-400"
-                                style="margin-left: {(topic.depth - 1) * 16 +
-                                    8}px"
-                            ></div>
-                        {/if}
-                    {/if}
-                {/each}
-            </div>
+            <TopicList
+                {topics}
+                {collapsedIds}
+                {editingTopicId}
+                {editTopicTitle}
+                {draggedTopicId}
+                {deletingTopicId}
+                {isSaving}
+                {isVisible}
+                {isParent}
+                {hasMoreSiblingsAtDepth}
+                {showLineBefore}
+                {showLineAfter}
+                {dropIndicatorClass}
+                {toggleCollapse}
+                {handleDragStart}
+                {handleDragOver}
+                {handleDragLeave}
+                {handleDragEnd}
+                {startEditTopic}
+                {setEditTopicTitle}
+                {handleTopicKeydown}
+                {saveTopic}
+                {cancelEditTopic}
+                {handleDeleteTopic}
+                {handleDrop}
+            />
         </div>
     {:else}
         <div class="py-12 text-center">
@@ -949,71 +765,10 @@
             {/if}
 
             {#if parseResult && parseResult.topics.length > 0}
-                <div
-                    class="rounded-lg bg-neutral-50 dark:bg-neutral-700 p-3 ring-1 ring-neutral-100 dark:ring-neutral-700"
-                >
-                    <p class="mb-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                        Preview - {parseResult.topics.length} topic{parseResult
-                            .topics.length === 1
-                            ? ""
-                            : "s"}
-                    </p>
-                    <div class="space-y-px">
-                        {#each parseResult.topics as topic, i}
-                            <div class="flex min-w-0 items-center leading-5">
-                                {#if topic.depth > 1}
-                                    <div
-                                        class="flex shrink-0 items-center self-stretch"
-                                    >
-                                        {#each Array(topic.depth - 1) as _, d}
-                                            {@const lineDepth = d + 1}
-                                            {@const isLastAtThisDepth =
-                                                d === topic.depth - 2}
-                                            <div
-                                                class="relative flex h-full w-4 items-center justify-center"
-                                            >
-                                                {#if isLastAtThisDepth}
-                                                    <div
-                                                        class="absolute left-1/2 top-0 h-1/2 w-px bg-neutral-200 dark:bg-neutral-700"
-                                                    ></div>
-                                                    <div
-                                                        class="absolute left-1/2 top-1/2 h-px w-[8px] bg-neutral-200 dark:bg-neutral-700"
-                                                    ></div>
-                                                    {#if previewHasMoreSiblingsAtDepth(i, topic.depth)}
-                                                        <div
-                                                            class="absolute left-1/2 top-1/2 h-1/2 w-px bg-neutral-200 dark:bg-neutral-700"
-                                                        ></div>
-                                                    {/if}
-                                                {:else if previewHasMoreSiblingsAtDepth(i, lineDepth + 1)}
-                                                    <div
-                                                        class="absolute left-1/2 top-0 h-full w-px bg-neutral-200 dark:bg-neutral-700"
-                                                    ></div>
-                                                {/if}
-                                            </div>
-                                        {/each}
-                                    </div>
-                                {/if}
-
-                                <div class="w-3 shrink-0"></div>
-                                <span
-                                    class="w-4 shrink-0 text-right font-mono text-[11px] text-neutral-300 dark:text-neutral-500"
-                                >
-                                    {topic.code.split(".").pop()}
-                                </span>
-                                <span
-                                    class="ml-1 min-w-0 text-sm {topic.depth ===
-                                    1
-                                        ? 'font-semibold text-neutral-900 dark:text-white'
-                                        : topic.depth === 2
-                                          ? 'font-medium text-neutral-700 dark:text-neutral-200'
-                                          : 'text-neutral-600 dark:text-neutral-400'}"
-                                >
-                                    {topic.title}
-                                </span>
-                            </div>
-                        {/each}
-                    </div>
-                </div>
+                <TopicOutlinePreview
+                    topics={parseResult.topics}
+                    hasMoreSiblingsAtDepth={previewHasMoreSiblingsAtDepth}
+                />
 
                 {#if saveError}
                     <p class="text-xs text-red-500 dark:text-red-400">{saveError}</p>

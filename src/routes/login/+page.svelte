@@ -84,11 +84,7 @@
 				return;
 			}
 
-			const api = await getConvexApi();
-			if (!api) {
-				error = "Convex API not generated. Run 'npx convex dev' first.";
-				return;
-			}
+			const api = getConvexApi();
 
 			if (isSignUp) {
 				const userId = await client.mutation(api.auth.signUp, {

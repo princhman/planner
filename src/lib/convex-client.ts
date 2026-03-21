@@ -1,17 +1,15 @@
 import { browser } from "$app/environment";
 import { PUBLIC_CONVEX_URL } from "$env/static/public";
 import { ConvexClient } from "convex/browser";
+import { api } from "./convex-api-loader.js";
 
 /**
- * Helper to get the Convex client and API.
- *
- * The Convex API module (`_generated/api.js`) is only available after
- * running `npx convex dev`. This helper handles the case where it
- * doesn't exist yet.
+ * Helper to get the Convex client and generated API.
  */
 
 let cachedClient: ConvexClient | null = null;
-let cachedApi: any = null;
+
+export type ConvexApi = typeof api;
 
 export function getConvexUrl(): string {
 	if (!browser) return "";
@@ -28,18 +26,8 @@ export function getConvexClient(): ConvexClient | null {
 	return cachedClient;
 }
 
-export async function getConvexApi(): Promise<any | null> {
-	if (cachedApi) return cachedApi;
-
-	try {
-		// Use a variable to prevent static analysis from failing on missing module
-		const modulePath = "./convex-api-loader.js";
-		const mod = await import(/* @vite-ignore */ modulePath);
-		cachedApi = mod.api;
-		return cachedApi;
-	} catch {
-		return null;
-	}
+export function getConvexApi(): ConvexApi {
+	return api;
 }
 
 export function isConvexConfigured(): boolean {

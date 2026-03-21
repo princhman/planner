@@ -29,6 +29,7 @@ import type {
 } from "$lib/types.js";
 import { computeRecommendation } from "$lib/engine.js";
 import type { ConvexClient } from "convex/browser";
+import type { Id } from "$convex/_generated/dataModel.js";
 
 /**
  * Create a ConvexRepository once the Convex API is available.
@@ -40,8 +41,8 @@ import type { ConvexClient } from "convex/browser";
 export class ConvexRepository implements PlannerRepository {
 	constructor(
 		private client: ConvexClient,
-		private userId: string,
-		private api: any, // Will be typed once _generated exists
+		private userId: Id<"users">,
+		private api: any,
 	) {}
 
 	// ── Subjects ──

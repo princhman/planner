@@ -1,16 +1,7 @@
 /**
- * This module re-exports the Convex generated API.
+ * Re-export the generated Convex API through a stable app-local path.
  *
- * It exists as a separate file so that the dynamic import in
- * convex-client.ts doesn't cause build failures when the
- * _generated directory doesn't exist yet.
- *
- * After running `npx convex dev`, the _generated directory
- * will be created and this module will work correctly.
- *
- * If _generated doesn't exist, the import will throw at runtime
- * and the caller handles it gracefully.
+ * Keeping the generated import behind this module lets the rest of the app
+ * avoid depending on Convex's generated directory layout directly.
  */
-
-// @ts-ignore - This import only resolves after `npx convex dev`
-export { api } from "$convex/_generated/api.js";
+export { api } from "../convex/_generated/api.js";

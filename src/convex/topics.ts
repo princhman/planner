@@ -208,6 +208,7 @@ export const remove = mutation({
 			await ctx.db.delete(topicId as never);
 		}
 
+		const now = Date.now();
 		const remainingTopics = subjectTopics
 			.filter((topic) => topic.userId === args.userId && !idsToDelete.has(topic._id))
 			.sort(compareTopicDocsByCode);
@@ -216,7 +217,7 @@ export const remove = mutation({
 		for (const update of updates) {
 			await ctx.db.patch(update.id, {
 				code: update.code,
-				updatedAt: Date.now(),
+				updatedAt: now,
 			});
 		}
 	},
