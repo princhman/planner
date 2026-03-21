@@ -7,6 +7,12 @@
 html {
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent double-tap zoom delay on interactive elements */
+button, a, [role="radio"], [role="radiogroup"] {
+	touch-action: manipulation;
 }
 
 /* Prevent content shift on scroll */

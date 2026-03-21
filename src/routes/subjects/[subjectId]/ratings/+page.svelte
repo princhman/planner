@@ -354,7 +354,7 @@
                         ></div>
                     {/if}
                     <div
-                        class="group flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3"
+                        class="group flex gap-1 flex-row sm:items-center sm:gap-3"
                         transition:slide
                     >
                         <!-- Tree structure + name -->
@@ -427,7 +427,7 @@
 
                             <!-- Code + title -->
                             <span
-                                class="w-5 shrink-0 text-right font-mono text-[11px] text-neutral-300 dark:text-neutral-500"
+                                class="w-5 shrink-0 text-right font-mono text-xs text-neutral-300 dark:text-neutral-500"
                                 >{topic.code.split(".").pop()}</span
                             >
                             <div class="ml-1.5 min-w-0">
