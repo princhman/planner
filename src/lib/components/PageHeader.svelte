@@ -16,11 +16,11 @@
 	<div class="flex min-w-0 items-center gap-3">
 		<a
 			href={backHref}
-			class="shrink-0 rounded-lg p-1.5 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+			class="shrink-0 rounded-lg p-1.5 text-neutral-400 dark:text-neutral-400 transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-neutral-900 dark:hover:text-white"
 		>
 			<ArrowLeft size={20} />
 		</a>
-		<h1 class="truncate text-lg font-semibold text-neutral-900">{title}</h1>
+		<h1 class="truncate text-lg font-semibold text-neutral-900 dark:text-white">{title}</h1>
 	</div>
 	{#if children}
 		<div class="flex shrink-0 items-center gap-2">

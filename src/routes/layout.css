@@ -1,6 +1,8 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Global styles */
 html {
 	-webkit-font-smoothing: antialiased;
@@ -17,6 +19,10 @@ html {
 	outline: 2px solid #404040;
 	outline-offset: 2px;
 	border-radius: 4px;
+}
+
+.dark :focus-visible {
+	outline-color: #a3a3a3;
 }
 
 /* Smooth page transitions */

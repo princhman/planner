@@ -9,5 +9,5 @@
 </script>
 
 <div class="py-16 text-center">
-	<p class="text-sm text-neutral-400">Redirecting...</p>
+	<p class="text-sm text-neutral-400 dark:text-neutral-400">Redirecting...</p>
 </div>

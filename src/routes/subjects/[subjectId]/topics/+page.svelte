@@ -10,6 +10,6 @@
 	});
 </script>
 
-<div class="py-16 text-center text-sm text-neutral-400">
+<div class="py-16 text-center text-sm text-neutral-400 dark:text-neutral-400">
 	Redirecting to edit mode...
 </div>

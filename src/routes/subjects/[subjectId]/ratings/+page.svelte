@@ -20,6 +20,7 @@
     import Tooltip from "$lib/components/Tooltip.svelte";
     import { getPlannerSettings } from "$lib/stores/settings-store.svelte.js";
     import { ChevronDown, ChevronRight } from "lucide-svelte";
+    import { slide } from "svelte/transition";
 
     const subjectId = $derived($page.params.subjectId ?? "");
     const plannerSettings = $derived(getPlannerSettings());
@@ -206,7 +207,7 @@
 <PageHeader title={subject?.name ?? "Rate Topics"} backHref="/">
     <a
         href="/subjects/{subjectId}/edit"
-        class="text-xs text-neutral-400 transition-colors hover:text-neutral-700"
+        class="text-xs text-neutral-400 dark:text-neutral-400 transition-colors hover:text-neutral-700 dark:hover:text-neutral-200"
     >
         Edit
     </a>
@@ -214,10 +215,12 @@
 
 {#if topics.length === 0}
     <div class="py-16 text-center">
-        <p class="text-sm text-neutral-400">No topics to rate.</p>
+        <p class="text-sm text-neutral-400 dark:text-neutral-400">
+            No topics to rate.
+        </p>
         <a
             href="/subjects/{subjectId}/edit"
-            class="mt-4 inline-block rounded-lg bg-neutral-900 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-700"
+            class="mt-4 inline-block rounded-lg bg-neutral-900 dark:bg-white dark:text-neutral-900 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-700 dark:hover:bg-neutral-200"
         >
             Import topics
         </a>
@@ -227,7 +230,7 @@
         <!-- Summary bar -->
         <div>
             <div
-                class="flex h-2 w-full overflow-hidden rounded-full bg-neutral-100"
+                class="flex h-2 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-700"
             >
                 {#each confidenceDistribution() as seg}
                     {#if seg.percent > 0}
@@ -246,7 +249,7 @@
                 {/each}
             </div>
             <div
-                class="mt-1.5 flex items-center gap-3 text-xs text-neutral-400"
+                class="mt-1.5 flex items-center gap-3 text-xs text-neutral-400 dark:text-neutral-400"
             >
                 <span>{ratedCount}/{topics.length} rated</span>
                 {#each confidenceDistribution() as seg}
@@ -265,7 +268,9 @@
         </div>
 
         <!-- Legend -->
-        <div class="rounded-xl border border-neutral-200 bg-neutral-50/70">
+        <div
+            class="rounded-xl border border-neutral-200 dark:border-neutral-600 bg-neutral-50/70 dark:bg-neutral-900/70"
+        >
             <button
                 type="button"
                 class="flex w-full items-start justify-between gap-3 p-3 text-left"
@@ -274,64 +279,61 @@
                 aria-controls="understanding-legend"
             >
                 <div>
-                    <p class="text-sm font-medium text-neutral-800">
+                    <p
+                        class="text-sm font-medium text-neutral-800 dark:text-white"
+                    >
                         Understanding scale
                     </p>
+                    <span class="text-xs text-neutral-500 dark:text-neutral-400"
+                        >Note: parent topic's confidence can't be edited, it is
+                        derived.</span
+                    >
                 </div>
-                <ChevronDown
-                    size={16}
-                    class="mt-0.5 shrink-0 text-neutral-400 transition-transform duration-150 {legendCollapsed
-                        ? '-rotate-90'
-                        : ''}"
-                />
+                <div class="self-center">
+                    <ChevronDown
+                        size={16}
+                        class="mt-0.5 shrink-0 text-neutral-400 dark:text-neutral-400 transition-transform duration-150 {legendCollapsed
+                            ? '-rotate-90'
+                            : ''}"
+                    />
+                </div>
             </button>
             {#if !legendCollapsed}
                 <div
                     id="understanding-legend"
-                    class="border-t border-neutral-200 px-3 pb-3 pt-3"
+                    class="px-3 pb-3"
+                    transition:slide
                 >
                     <div
-                        class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-neutral-500"
+                        class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs"
                     >
-                        <span>Grey = not started yet.</span>
-                        <span
-                            >Amber/yellow = you know it, but not strongly.</span
-                        >
-                        <span
-                            >Green = you can answer questions with confidence.</span
-                        >
                         {#if plannerSettings.importanceEnabled}
                             <span>Dots = importance from 1 to 5.</span>
                         {/if}
                     </div>
                     <div class="grid gap-2 sm:grid-cols-2">
                         {#each CONFIDENCE_LEVELS as level}
-                            <Tooltip
-                                content={`${CONFIDENCE_LABELS[level]}: ${CONFIDENCE_DESCRIPTIONS[level]}`}
-                                class="w-full"
+                            <div
+                                class="flex items-start gap-2 rounded-lg bg-white/80 dark:bg-neutral-800/80 px-3 py-2 ring-1 ring-neutral-200/80 dark:ring-neutral-600/80"
                             >
-                                <div
-                                    class="flex items-start gap-2 rounded-lg bg-white/80 px-3 py-2 ring-1 ring-neutral-200/80"
-                                >
-                                    <span
-                                        class="mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full {CONFIDENCE_COLORS[
-                                            level
-                                        ]}"
-                                    ></span>
-                                    <div class="min-w-0">
-                                        <p
-                                            class="text-xs font-medium text-neutral-800"
-                                        >
-                                            {CONFIDENCE_LABELS[level]}
-                                        </p>
-                                        <p
-                                            class="text-xs leading-5 text-neutral-500"
-                                        >
-                                            {CONFIDENCE_DESCRIPTIONS[level]}
-                                        </p>
-                                    </div>
+                                <span
+                                    class="mt-1 inline-block h-2.5 w-2.5 shrink-0 rounded-full {CONFIDENCE_COLORS[
+                                        level
+                                    ]}"
+                                ></span>
+                                <div class="min-w-0">
+                                    <p
+                                        class="text-xs font-medium text-neutral-800 dark:text-white"
+                                    >
+                                        {CONFIDENCE_LABELS[level]}
+                                    </p>
+                                    <p
+                                        class="text-xs leading-5 text-neutral-500 dark:text-neutral-400"
+                                    >
+                                        {CONFIDENCE_DESCRIPTIONS[level]}
+                                    </p>
                                 </div>
-                            </Tooltip>
+                            </div>
                         {/each}
                     </div>
                 </div>
@@ -347,10 +349,13 @@
                 {@const topicConfidence = displayConfidence(topic)}
                 {#if visible}
                     {#if isTopLevel && i > 0}
-                        <div class="my-2 border-t border-neutral-100"></div>
+                        <div
+                            class="my-2 border-t border-neutral-100 dark:border-neutral-700"
+                        ></div>
                     {/if}
                     <div
                         class="group flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3"
+                        transition:slide
                     >
                         <!-- Tree structure + name -->
                         <div class="flex min-w-0 flex-1 items-center">
@@ -374,22 +379,22 @@
                                                         topic.depth,
                                                     )
                                                         ? ''
-                                                        : ''} bg-neutral-200"
+                                                        : ''} bg-neutral-200 dark:bg-neutral-700"
                                                 ></div>
                                                 <div
-                                                    class="absolute left-1/2 top-1/2 h-px w-[10px] bg-neutral-200"
+                                                    class="absolute left-1/2 top-1/2 h-px w-[10px] bg-neutral-200 dark:bg-neutral-700"
                                                 ></div>
                                                 {#if hasMoreSiblingsAtDepth(i, topic.depth)}
                                                     <!-- ├── continuing line below -->
                                                     <div
-                                                        class="absolute left-1/2 top-1/2 h-1/2 w-px bg-neutral-200"
+                                                        class="absolute left-1/2 top-1/2 h-1/2 w-px bg-neutral-200 dark:bg-neutral-700"
                                                     ></div>
                                                 {/if}
                                             {:else}
                                                 <!-- Vertical pass-through: │ -->
                                                 {#if hasMoreSiblingsAtDepth(i, lineDepth + 1)}
                                                     <div
-                                                        class="absolute left-1/2 top-0 h-full w-px bg-neutral-200"
+                                                        class="absolute left-1/2 top-0 h-full w-px bg-neutral-200 dark:bg-neutral-700"
                                                     ></div>
                                                 {/if}
                                             {/if}
@@ -402,7 +407,7 @@
                             {#if hasChildren}
                                 <button
                                     onclick={() => toggleCollapse(topic.id)}
-                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded text-neutral-300 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded text-neutral-300 dark:text-neutral-500 transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-neutral-600 dark:hover:text-neutral-200"
                                     aria-label={collapsedIds.has(topic.id)
                                         ? "Expand"
                                         : "Collapse"}
@@ -417,21 +422,21 @@
                                     />
                                 </button>
                             {:else}
-                                <div class="w-6 shrink-0"></div>
+                                <div class="w-4 shrink-0"></div>
                             {/if}
 
                             <!-- Code + title -->
                             <span
-                                class="w-5 shrink-0 text-right font-mono text-[11px] text-neutral-300"
+                                class="w-5 shrink-0 text-right font-mono text-[11px] text-neutral-300 dark:text-neutral-500"
                                 >{topic.code.split(".").pop()}</span
                             >
                             <div class="ml-1.5 min-w-0">
                                 <span
                                     class="truncate text-sm {isTopLevel
-                                        ? 'font-semibold text-neutral-900'
+                                        ? 'font-semibold text-neutral-900 dark:text-white'
                                         : topic.depth === 2
-                                          ? 'font-medium text-neutral-700'
-                                          : 'text-neutral-600'}"
+                                          ? 'font-medium text-neutral-700 dark:text-neutral-200'
+                                          : 'text-neutral-600 dark:text-neutral-400'}"
                                 >
                                     {topic.title}
                                 </span>

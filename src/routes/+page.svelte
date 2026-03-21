@@ -26,6 +26,8 @@
     import { buildTopicConfidenceSummary } from "$lib/topic-confidence.js";
     import { Settings, Plus, ChevronRight, BookOpen } from "lucide-svelte";
     import ConfidenceBar from "$lib/components/ConfidenceBar.svelte";
+    import { slide } from "svelte/transition";
+    import { flip } from "svelte/animate";
 
     const subjects = $derived(getSubjects());
     const isLoading = $derived(getIsLoading());
@@ -356,27 +358,27 @@
 <div class="space-y-8">
     <!-- Header -->
     <div class="flex items-center justify-between">
-        <h1 class="text-xl font-semibold text-neutral-900">
+        <h1 class="text-xl font-semibold text-neutral-900 dark:text-white">
             What should I study?
         </h1>
         <div class="flex items-center gap-1">
             <a
                 href="/setup"
-                class="rounded-lg p-1.5 text-neutral-300 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+                class="rounded-lg p-1.5 text-neutral-300 transition-colors hover:bg-neutral-100 hover:text-neutral-600 dark:text-neutral-500 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
                 title="Add subject"
             >
                 <Plus size={18} />
             </a>
             <a
                 href="/journal"
-                class="rounded-lg p-1.5 text-neutral-300 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+                class="rounded-lg p-1.5 text-neutral-300 transition-colors hover:bg-neutral-100 hover:text-neutral-600 dark:text-neutral-500 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
                 title="Journal"
             >
                 <BookOpen size={18} />
             </a>
             <a
                 href="/login"
-                class="rounded-lg p-1.5 text-neutral-300 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+                class="rounded-lg p-1.5 text-neutral-300 transition-colors hover:bg-neutral-100 hover:text-neutral-600 dark:text-neutral-500 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
                 title="Account"
             >
                 <Settings size={18} />
@@ -385,26 +387,34 @@
     </div>
 
     {#if isLoading}
-        <div class="py-16 text-center text-sm text-neutral-400">Loading...</div>
+        <div
+            class="py-16 text-center text-sm text-neutral-400 dark:text-neutral-400"
+        >
+            Loading...
+        </div>
     {:else if subjects.length === 0}
         <!-- First-time empty state -->
         <div class="space-y-6 py-12 text-center">
             <div>
-                <h2 class="text-lg font-semibold text-neutral-800">
+                <h2
+                    class="text-lg font-semibold text-neutral-800 dark:text-white"
+                >
                     Start revising
                 </h2>
-                <p class="mt-1.5 text-sm text-neutral-500">
+                <p
+                    class="mt-1.5 text-sm text-neutral-500 dark:text-neutral-400"
+                >
                     Add a subject, import your topics, rate your confidence,
                     then get told what to study next.
                 </p>
             </div>
             <a
                 href="/setup"
-                class="inline-block rounded-lg bg-neutral-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-700"
+                class="inline-block rounded-lg bg-neutral-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
             >
                 Add your first subject
             </a>
-            <p class="text-xs text-neutral-400">
+            <p class="text-xs text-neutral-400 dark:text-neutral-400">
                 Everything stays in your browser. No account needed.
             </p>
         </div>
@@ -416,21 +426,21 @@
                 {@const examInfo = daysUntilExam(subject.examDate)}
                 <a
                     href="/subjects/{subject.id}/ratings"
-                    class="block py-3 -mx-2 px-2 rounded-lg transition-colors hover:bg-neutral-50 {i <
+                    class="block py-3 -mx-2 px-2 rounded-lg transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-700/50 {i <
                     subjects.length - 1
-                        ? 'border-b border-neutral-100'
+                        ? 'border-b border-neutral-100 dark:border-neutral-700'
                         : ''}"
                 >
                     <div class="flex items-center justify-between gap-3">
                         <div class="min-w-0">
                             <div class="flex items-baseline gap-2">
                                 <span
-                                    class="truncate text-sm font-medium text-neutral-900"
+                                    class="truncate text-sm font-medium text-neutral-900 dark:text-white"
                                     >{subject.name}</span
                                 >
                                 {#if examInfo}
                                     <span
-                                        class="shrink-0 text-xs text-neutral-400"
+                                        class="shrink-0 text-xs text-neutral-400 dark:text-neutral-400"
                                         >{examInfo}</span
                                     >
                                 {/if}
@@ -438,13 +448,13 @@
                         </div>
                         <ChevronRight
                             size={16}
-                            class="shrink-0 text-neutral-300"
+                            class="shrink-0 text-neutral-300 dark:text-neutral-500"
                         />
                     </div>
                     {#if stats}
                         <div class="mt-2 flex items-center gap-2">
                             <div
-                                class="h-1.5 flex-1 overflow-hidden rounded-full bg-neutral-100"
+                                class="h-1.5 flex-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-700"
                             >
                                 {#each stats.dist as seg}
                                     {#if seg.percent > 0}
@@ -460,12 +470,17 @@
                                     {/if}
                                 {/each}
                             </div>
-                            <span class="shrink-0 text-xs text-neutral-400"
+                            <span
+                                class="shrink-0 text-xs text-neutral-400 dark:text-neutral-400"
                                 >{stats.rated}/{stats.total}</span
                             >
                         </div>
                     {:else}
-                        <p class="mt-1 text-xs text-neutral-400">No topics</p>
+                        <p
+                            class="mt-1 text-xs text-neutral-400 dark:text-neutral-400"
+                        >
+                            No topics
+                        </p>
                     {/if}
                 </a>
             {/each}
@@ -475,35 +490,41 @@
         <div class="space-y-5">
             {#if isLoadingRec}
                 <div class="py-12 text-center">
-                    <p class="text-sm text-neutral-400">
+                    <p class="text-sm text-neutral-400 dark:text-neutral-400">
                         Finding your next topic...
                     </p>
                 </div>
             {:else if recommendation}
                 <div
-                    class="rounded-xl bg-white px-5 py-4 shadow-sm ring-1 ring-neutral-100"
+                    class="rounded-xl bg-white px-5 py-4 shadow-sm ring-1 ring-neutral-100 dark:bg-neutral-800 dark:ring-neutral-700"
                 >
                     <span
-                        class="text-[11px] font-medium uppercase tracking-wide text-neutral-400"
+                        class="text-[11px] font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-400"
                     >
                         {subjectName}
                     </span>
-                    <h2 class="text-base font-semibold text-neutral-900">
+                    <h2
+                        class="text-base font-semibold text-neutral-900 dark:text-white"
+                    >
                         <span
-                            class="font-mono text-xs font-normal text-neutral-400"
+                            class="font-mono text-xs font-normal text-neutral-400 dark:text-neutral-400"
                             >{topicCode}</span
                         >
                         {topicName}
                     </h2>
 
-                    <p class="mt-3 text-sm font-medium text-neutral-700">
+                    <p
+                        class="mt-3 text-sm font-medium text-neutral-700 dark:text-neutral-200"
+                    >
                         {ACTION_LABELS[recommendation.actionType]}
                     </p>
-                    <p class="mt-1 text-sm text-neutral-500">
+                    <p
+                        class="mt-1 text-sm text-neutral-500 dark:text-neutral-400"
+                    >
                         {recommendation.successCriteria}
                     </p>
                     <div
-                        class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-400"
+                        class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-400 dark:text-neutral-400"
                     >
                         <span>{recommendationConfidenceLabel()}</span>
                         <span
@@ -516,7 +537,7 @@
                     </div>
 
                     {#if showComplete}
-                        <div class="mt-4 space-y-3">
+                        <div class="mt-4 space-y-3" transition:slide>
                             <div class="flex items-center gap-3">
                                 <ConfidenceBar
                                     value={confidenceAfter ??
@@ -529,63 +550,61 @@
                                     {CONFIDENCE_LABELS[confidenceAfter]}
                                 </p>
                             </div>
-                            <div class="flex items-center justify-end gap-3">
-                                <button
-                                    onclick={() => {
-                                        showComplete = false;
-                                    }}
-                                    class="text-sm text-neutral-400 transition-colors hover:text-neutral-600"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onclick={handleComplete}
-                                    disabled={isCompleting ||
-                                        confidenceAfter === null}
-                                    class="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-700 disabled:opacity-50"
-                                >
-                                    {isCompleting ? "Saving..." : "Save"}
-                                </button>
-                            </div>
-                        </div>
-                    {:else}
-                        <div class="mt-4 flex items-center justify-end gap-3">
-                            <button
-                                onclick={handleSkip}
-                                class="text-sm text-neutral-400 transition-colors hover:text-neutral-600"
-                            >
-                                Skip
-                            </button>
-                            <button
-                                onclick={handleStartComplete}
-                                class="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-700"
-                            >
-                                Mark complete
-                            </button>
                         </div>
                     {/if}
+                    <div class="mt-4 flex items-center justify-end gap-3">
+                        <button
+                            onclick={() => {
+                                showComplete
+                                    ? (showComplete = false)
+                                    : handleSkip();
+                            }}
+                            class="text-sm text-neutral-400 transition-colors hover:text-neutral-600 dark:text-neutral-400 dark:hover:text-neutral-200"
+                        >
+                            {showComplete ? "Cancel" : "Skip"}
+                        </button>
+                        <button
+                            onclick={() => {
+                                showComplete
+                                    ? handleComplete()
+                                    : (showComplete = true);
+                            }}
+                            class="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+                        >
+                            {showComplete
+                                ? isCompleting
+                                    ? "Saving..."
+                                    : "Save"
+                                : "Mark complete"}
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Up Next -->
                 {#if upNextItems.length > 0}
                     <div class="space-y-2">
                         <h3
-                            class="text-[11px] font-medium uppercase tracking-wide text-neutral-400"
+                            class="text-[11px] font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-400"
                         >
                             Up next
                         </h3>
-                        {#each upNextItems as item}
+                        {#each upNextItems as item (item.topicCode)}
                             <div
-                                class="rounded-lg bg-white px-4 py-2.5 ring-1 ring-neutral-100"
+                                class="rounded-lg bg-white px-4 py-2.5 ring-1 ring-neutral-100 dark:bg-neutral-800 dark:ring-neutral-700"
+                                transition:slide
                             >
-                                <p class="truncate text-sm text-neutral-700">
+                                <p
+                                    class="truncate text-sm text-neutral-700 dark:text-neutral-200"
+                                >
                                     <span
-                                        class="font-mono text-[11px] text-neutral-400"
+                                        class="font-mono text-[11px] text-neutral-400 dark:text-neutral-400"
                                         >{item.topicCode}</span
                                     >
                                     {item.topicName}
                                 </p>
-                                <p class="text-[11px] text-neutral-400">
+                                <p
+                                    class="text-[11px] text-neutral-400 dark:text-neutral-400"
+                                >
                                     {item.subjectName} · {item.actionLabel}
                                 </p>
                             </div>
@@ -594,7 +613,7 @@
                 {/if}
             {:else}
                 <div class="py-8 text-center">
-                    <p class="text-sm text-neutral-400">
+                    <p class="text-sm text-neutral-400 dark:text-neutral-400">
                         {skippedTopicIds.size > 0
                             ? "No more topics to recommend."
                             : "No recommendation available. Rate your topics to get started."}
@@ -605,7 +624,7 @@
                                 skippedTopicIds = new Set();
                                 fetchRecommendation();
                             }}
-                            class="mt-3 text-sm text-neutral-500 underline decoration-neutral-300 underline-offset-2 hover:text-neutral-700"
+                            class="mt-3 text-sm text-neutral-500 underline decoration-neutral-300 underline-offset-2 hover:text-neutral-700 dark:text-neutral-400 dark:decoration-neutral-500 dark:hover:text-neutral-200"
                         >
                             Reset skipped topics
                         </button>

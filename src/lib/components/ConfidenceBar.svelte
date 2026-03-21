@@ -35,7 +35,7 @@
 >
     {#each CONFIDENCE_LEVELS as level, i}
         {@const filled = i <= currentIndex}
-        {@const color = filled ? CONFIDENCE_COLORS[value] : "bg-neutral-100"}
+        {@const color = filled ? CONFIDENCE_COLORS[value] : "bg-neutral-100 dark:bg-neutral-700"}
         {#if readonly}
             <Tooltip
                 content={`${currentLabel}: ${currentDescription}`}
@@ -43,7 +43,7 @@
             >
                 <div
                     class="h-full w-full {color} {i > 0
-                        ? 'border-l border-white/20'
+                        ? 'border-l border-white/20 dark:border-neutral-900/20'
                         : ''}"
                 ></div>
             </Tooltip>
@@ -56,8 +56,8 @@
                     onclick={() => onchange?.(level)}
                     class="h-full w-full cursor-pointer transition-all {color} {i >
                     0
-                        ? 'border-l border-white/20'
-                        : ''} hover:brightness-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-inset"
+                        ? 'border-l border-white/20 dark:border-neutral-900/20'
+                        : ''} hover:brightness-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 dark:focus-visible:ring-neutral-500 focus-visible:ring-inset"
                     aria-label={`Set confidence to ${CONFIDENCE_LABELS[level]}`}
                     aria-checked={level === value}
                     role="radio"

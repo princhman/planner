@@ -46,7 +46,7 @@
 <form onsubmit={handleSubmit} class="space-y-5">
     <!-- Subject name -->
     <div>
-        <label for="name" class="block text-xs font-medium text-neutral-500">
+        <label for="name" class="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
             Subject name
         </label>
         <input
@@ -54,7 +54,7 @@
             type="text"
             bind:value={name}
             placeholder="e.g. Biology, Mathematics"
-            class="mt-1 block w-full rounded-lg border-0 bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-neutral-200 placeholder:text-neutral-300 focus:ring-2 focus:ring-neutral-400 focus:outline-none"
+            class="mt-1 block w-full rounded-lg border-0 bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-neutral-200 placeholder:text-neutral-300 focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:bg-neutral-700 dark:text-white dark:ring-neutral-600 dark:placeholder:text-neutral-500 dark:focus:ring-neutral-500"
         />
     </div>
 
@@ -62,33 +62,33 @@
     <div>
         <label
             for="examDate"
-            class="block text-xs font-medium text-neutral-500"
+            class="block text-xs font-medium text-neutral-500 dark:text-neutral-400"
         >
             Exam date
-            <span class="font-normal text-neutral-300">(optional)</span>
+            <span class="font-normal text-neutral-300 dark:text-neutral-500">(optional)</span>
         </label>
         <input
             id="examDate"
             type="date"
             bind:value={examDate}
-            class="mt-1 block w-full rounded-lg border-0 bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:outline-none"
+            class="mt-1 block w-full rounded-lg border-0 bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:bg-neutral-700 dark:text-white dark:ring-neutral-600 dark:focus:ring-neutral-500"
         />
     </div>
 
     <!-- Error message -->
     {#if error}
-        <p class="text-xs text-red-500">{error}</p>
+        <p class="text-xs text-red-500 dark:text-red-400">{error}</p>
     {/if}
 
     <!-- Submit -->
     <div class="flex justify-end items-center gap-3 pt-1">
-        <a href="/" class="text-sm text-neutral-400 hover:text-neutral-600"
+        <a href="/" class="text-sm text-neutral-400 hover:text-neutral-600 dark:text-neutral-400 dark:hover:text-neutral-200"
             >Cancel</a
         >
         <button
             type="submit"
             disabled={isSubmitting}
-            class="rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-700 disabled:opacity-50"
+            class="rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-700 disabled:opacity-50 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
         >
             {isSubmitting ? "Creating..." : "Create subject"}
         </button>

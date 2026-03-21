@@ -24,7 +24,7 @@
 	<meta name="theme-color" content="#fafafa" />
 </svelte:head>
 
-<div class="min-h-screen bg-neutral-50 text-neutral-900">
+<div class="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-900 dark:text-neutral-50">
 	<main class="mx-auto w-full max-w-2xl px-4 py-5 sm:py-8">
 		{@render children()}
 	</main>

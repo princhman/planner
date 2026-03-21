@@ -139,11 +139,17 @@
 <PageHeader title="Journal" />
 
 {#if isLoading || isLoadingSessions}
-    <div class="py-16 text-center text-sm text-neutral-400">Loading...</div>
+    <div
+        class="py-16 text-center text-sm text-neutral-400 dark:text-neutral-400"
+    >
+        Loading...
+    </div>
 {:else if groups.length === 0}
     <div class="space-y-2 py-16 text-center">
-        <p class="text-sm text-neutral-500">No study sessions yet.</p>
-        <p class="text-xs text-neutral-400">
+        <p class="text-sm text-neutral-500 dark:text-neutral-400">
+            No study sessions yet.
+        </p>
+        <p class="text-xs text-neutral-400 dark:text-neutral-400">
             Complete a study session to see your progress here.
         </p>
     </div>
@@ -152,30 +158,28 @@
         {#each groups as group}
             <div class="space-y-1.5">
                 <h2
-                    class="text-[11px] font-medium uppercase tracking-wide text-neutral-400"
+                    class="text-[11px] font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-400"
                 >
                     {group.label}
                 </h2>
                 <div class="space-y-1">
                     {#each group.sessions as session}
                         <div
-                            class="rounded-lg bg-white px-4 py-3 ring-1 ring-neutral-100"
+                            class="rounded-lg bg-white dark:bg-neutral-800 px-4 py-3 ring-1 ring-neutral-100 dark:ring-neutral-700 mb-2"
                         >
-                            <div
-                                class="flex items-start justify-between gap-3"
-                            >
+                            <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <p
-                                        class="truncate text-sm font-medium text-neutral-900"
+                                        class="truncate text-sm font-medium text-neutral-900 dark:text-white"
                                     >
                                         <span
-                                            class="font-mono text-[11px] font-normal text-neutral-400"
+                                            class="font-mono text-[11px] font-normal text-neutral-400 dark:text-neutral-400"
                                             >{session.topicCode}</span
                                         >
                                         {session.topicTitle}
                                     </p>
                                     <p
-                                        class="mt-0.5 text-[11px] text-neutral-400"
+                                        class="mt-0.5 text-[11px] text-neutral-400 dark:text-neutral-400"
                                     >
                                         {session.subjectName} · {ACTION_LABELS[
                                             session.actionType
@@ -183,20 +187,20 @@
                                     </p>
                                 </div>
                                 <span
-                                    class="shrink-0 text-[11px] text-neutral-300"
+                                    class="shrink-0 text-[11px] text-neutral-300 dark:text-neutral-500"
                                     >{formatTime(session.completedAt)}</span
                                 >
                             </div>
 
                             <!-- Before → After -->
                             <div
-                                class="mt-2 flex items-center gap-2 text-xs text-neutral-500"
+                                class="mt-2 flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400"
                             >
-                                <span
-                                    class="inline-flex items-center gap-1.5"
-                                >
+                                <span class="inline-flex items-center gap-1.5">
                                     <span
-                                        class="inline-block h-2 w-2 rounded-full {confidenceDotClass(session.confidenceBefore)}"
+                                        class="inline-block h-2 w-2 rounded-full {confidenceDotClass(
+                                            session.confidenceBefore,
+                                        )}"
                                     ></span>
                                     {CONFIDENCE_LABELS[
                                         session.confidenceBefore
@@ -204,21 +208,24 @@
                                 </span>
                                 <ArrowRight
                                     size={12}
-                                    class="shrink-0 text-neutral-300"
+                                    class="shrink-0 text-neutral-300 dark:text-neutral-500"
                                 />
                                 {#if session.confidenceAfter}
                                     <span
                                         class="inline-flex items-center gap-1.5"
                                     >
                                         <span
-                                            class="inline-block h-2 w-2 rounded-full {confidenceDotClass(session.confidenceAfter)}"
+                                            class="inline-block h-2 w-2 rounded-full {confidenceDotClass(
+                                                session.confidenceAfter,
+                                            )}"
                                         ></span>
                                         {CONFIDENCE_LABELS[
                                             session.confidenceAfter
                                         ]}
                                     </span>
                                 {:else}
-                                    <span class="text-neutral-300"
+                                    <span
+                                        class="text-neutral-300 dark:text-neutral-500"
                                         >Not rated</span
                                     >
                                 {/if}
