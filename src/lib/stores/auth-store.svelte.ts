@@ -4,7 +4,7 @@ import { browser } from "$app/environment";
  * Authentication store.
  *
  * Manages user login state and Convex client connection.
- * Stores the user ID and Convex URL in localStorage.
+ * Stores the user ID and email in localStorage.
  *
  * The actual Convex client setup and repository swap
  * happen in the layout component.
@@ -13,7 +13,6 @@ import { browser } from "$app/environment";
 const AUTH_KEYS = {
 	userId: "planner:auth:userId",
 	userEmail: "planner:auth:email",
-	convexUrl: "planner:auth:convexUrl",
 } as const;
 
 // Reactive auth state

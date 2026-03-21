@@ -137,7 +137,7 @@
 	// ── Foldable state ──
 
 	function collapsedKey(): string {
-		return `planner_collapsed_edit_${subjectId}`;
+		return `planner_collapsed_topics_${subjectId}`;
 	}
 
 	function loadCollapsed(): Set<string> {
@@ -233,9 +233,48 @@
 		showImporter = true;
 	}
 
-	function depthPadding(depth: number): string {
-		if (depth <= 1) return "";
-		return `padding-left: ${(depth - 1) * 16}px`;
+	async function normalizeTopicStructure() {
+		const currentTopics = await getRepository().listTopics(subjectId);
+		if (currentTopics.length === 0) return;
+
+		const newCodes = recalculateCodes(
+			currentTopics.map((topic) => ({
+				id: topic.id,
+				depth: topic.depth,
+				parentTopicId: topic.parentTopicId,
+			})),
+		);
+
+		await getRepository().reorganizeTopics({
+			subjectId,
+			topics: currentTopics.map((topic) => ({
+				topicId: topic.id,
+				code: newCodes.get(topic.id) ?? topic.code,
+				depth: topic.depth,
+				parentTopicId: topic.parentTopicId,
+			})),
+		});
+		await refreshTopics(subjectId);
+
+		const validIds = new Set(currentTopics.map((topic) => topic.id));
+		const nextCollapsed = new Set(
+			[...collapsedIds].filter((id) => validIds.has(id)),
+		);
+		collapsedIds = nextCollapsed;
+		saveCollapsed(nextCollapsed);
+	}
+
+	function previewHasMoreSiblingsAtDepth(
+		index: number,
+		targetDepth: number,
+	): boolean {
+		if (!parseResult) return false;
+		for (let j = index + 1; j < parseResult.topics.length; j++) {
+			const topic = parseResult.topics[j];
+			if (topic.depth < targetDepth) return false;
+			if (topic.depth === targetDepth) return true;
+		}
+		return false;
 	}
 
 	// ── Subject editing ──
@@ -323,6 +362,7 @@
 		try {
 			await getRepository().deleteTopic(topicId);
 			await refreshTopics(subjectId);
+			await normalizeTopicStructure();
 		} catch {
 			/* ignore */
 		} finally {
@@ -910,11 +950,42 @@
 					<p class="mb-2 text-xs font-medium text-neutral-500">
 						Preview - {parseResult.topics.length} topic{parseResult.topics.length === 1 ? "" : "s"}
 					</p>
-					<div class="space-y-0.5">
-						{#each parseResult.topics as topic}
-							<div class="flex items-center gap-2" style={depthPadding(topic.depth)}>
-								<span class="font-mono text-[11px] text-neutral-400">{topic.code}</span>
-								<span class="text-sm text-neutral-600">{topic.title}</span>
+					<div class="space-y-px">
+						{#each parseResult.topics as topic, i}
+							<div class="flex min-w-0 items-center leading-5">
+								{#if topic.depth > 1}
+									<div class="flex shrink-0 items-center self-stretch">
+										{#each Array(topic.depth - 1) as _, d}
+											{@const lineDepth = d + 1}
+											{@const isLastAtThisDepth = d === topic.depth - 2}
+											<div class="relative flex h-full w-4 items-center justify-center">
+												{#if isLastAtThisDepth}
+													<div class="absolute left-1/2 top-0 h-1/2 w-px bg-neutral-200"></div>
+													<div class="absolute left-1/2 top-1/2 h-px w-[8px] bg-neutral-200"></div>
+													{#if previewHasMoreSiblingsAtDepth(i, topic.depth)}
+														<div class="absolute left-1/2 top-1/2 h-1/2 w-px bg-neutral-200"></div>
+													{/if}
+												{:else}
+													{#if previewHasMoreSiblingsAtDepth(i, lineDepth + 1)}
+														<div class="absolute left-1/2 top-0 h-full w-px bg-neutral-200"></div>
+													{/if}
+												{/if}
+											</div>
+										{/each}
+									</div>
+								{/if}
+
+								<div class="w-3 shrink-0"></div>
+								<span class="w-4 shrink-0 text-right font-mono text-[11px] text-neutral-300">
+									{topic.code.split(".").pop()}
+								</span>
+								<span class="ml-1 min-w-0 text-sm {topic.depth === 1
+									? 'font-semibold text-neutral-900'
+									: topic.depth === 2
+										? 'font-medium text-neutral-700'
+										: 'text-neutral-600'}">
+									{topic.title}
+								</span>
 							</div>
 						{/each}
 					</div>

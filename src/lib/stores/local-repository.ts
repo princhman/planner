@@ -196,7 +196,13 @@ export class LocalRepository implements PlannerRepository {
 				}
 			}
 		}
-		writeTopics(topics.filter((t) => !idsToDelete.has(t.id)));
+		const remainingTopics = topics.filter((t) => !idsToDelete.has(t.id));
+		const subjectTopics = remainingTopics
+			.filter((t) => t.subjectId === topic.subjectId)
+			.sort(compareTopicsByCode);
+		const renumbered = renumberTopics(subjectTopics);
+		const otherTopics = remainingTopics.filter((t) => t.subjectId !== topic.subjectId);
+		writeTopics([...otherTopics, ...renumbered]);
 	}
 
 	async deleteTopicsBySubject(subjectId: string): Promise<void> {
@@ -262,4 +268,45 @@ export class LocalRepository implements PlannerRepository {
 
 		return session;
 	}
+}
+
+function renumberTopics(topics: Topic[]): Topic[] {
+	const now = nowTimestamp();
+	const siblingCounter = new Map<string, number>();
+	const codes = new Map<string, string>();
+
+	return topics.map((topic) => {
+		const key = topic.parentTopicId ?? "__root__";
+		const count = (siblingCounter.get(key) ?? 0) + 1;
+		siblingCounter.set(key, count);
+
+		const parentCode = topic.parentTopicId
+			? (codes.get(topic.parentTopicId) ?? "")
+			: "";
+		const code = parentCode ? `${parentCode}.${count}` : `${count}`;
+		codes.set(topic.id, code);
+
+		return {
+			...topic,
+			code,
+			updatedAt: now,
+		};
+	});
+}
+
+function compareTopicsByCode(a: Topic, b: Topic): number {
+	const aParts = a.code.split(".").map((part) => Number(part));
+	const bParts = b.code.split(".").map((part) => Number(part));
+	const maxLength = Math.max(aParts.length, bParts.length);
+
+	for (let i = 0; i < maxLength; i++) {
+		const aPart = aParts[i];
+		const bPart = bParts[i];
+
+		if (aPart === undefined) return -1;
+		if (bPart === undefined) return 1;
+		if (aPart !== bPart) return aPart - bPart;
+	}
+
+	return 0;
 }

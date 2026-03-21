@@ -83,7 +83,7 @@
     // ── Foldable state (persisted per subject) ──
 
     function collapsedKey(): string {
-        return `planner_collapsed_ratings_${subjectId}`;
+        return `planner_collapsed_topics_${subjectId}`;
     }
 
     function loadCollapsed(): Set<string> {
@@ -435,15 +435,6 @@
                                 >
                                     {topic.title}
                                 </span>
-                                {#if hasChildren}
-                                    <p class="text-[11px] text-neutral-400">
-                                        Confidence is based on the weakest of {leafCount(
-                                            topic.id,
-                                        )} leaf topic{leafCount(topic.id) === 1
-                                            ? ""
-                                            : "s"}.
-                                    </p>
-                                {/if}
                             </div>
                         </div>
 

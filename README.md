@@ -1,42 +1,40 @@
-# sv
+# Planner
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+SvelteKit frontend with a Convex backend for synced planner data.
 
-## Creating a project
+## Local development
 
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
+Install dependencies:
 
 ```sh
-# recreate this project
-pnpm dlx sv@0.12.8 create --template minimal --types ts --add tailwindcss="plugins:typography" mcp="ide:claude-code,other+setup:local" --install pnpm planner
+pnpm install
 ```
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Start the frontend:
 
 ```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+pnpm dev
 ```
 
-## Building
-
-To create a production version of your app:
+Start Convex in a separate terminal:
 
 ```sh
-npm run build
+pnpm dev:convex
 ```
 
-You can preview the production build with `npm run preview`.
+When `pnpm dev:convex` starts for the first time, copy the deployment URL it prints and add it to `.env.local`:
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+```sh
+PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
+```
+
+Then restart the frontend dev server so Vite picks up the env var.
+
+## How Convex is enabled
+
+Convex is considered available when both of these are true:
+
+1. `PUBLIC_CONVEX_URL` is set in the frontend environment.
+2. The generated Convex API exists, which is created by running `pnpm dev:convex`.
+
+If a user is signed in and Convex is available, the app now boots directly into the Convex-backed repository. Otherwise it falls back to the local browser repository.

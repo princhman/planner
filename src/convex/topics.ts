@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel.js";
 import { mutation, query } from "./_generated/server.js";
 
 // ── Queries ──
@@ -99,6 +100,64 @@ export const updateRating = mutation({
 	},
 });
 
+export const update = mutation({
+	args: {
+		id: v.id("topics"),
+		userId: v.id("users"),
+		title: v.optional(v.string()),
+		code: v.optional(v.string()),
+	},
+	handler: async (ctx, args) => {
+		const existing = await ctx.db.get(args.id);
+		if (!existing || existing.userId !== args.userId) {
+			throw new Error("Topic not found");
+		}
+
+		const updates: Record<string, unknown> = { updatedAt: Date.now() };
+		if (args.title !== undefined) updates.title = args.title;
+		if (args.code !== undefined) updates.code = args.code;
+		await ctx.db.patch(args.id, updates);
+	},
+});
+
+export const reorganize = mutation({
+	args: {
+		userId: v.id("users"),
+		subjectId: v.id("subjects"),
+		topics: v.array(
+			v.object({
+				id: v.id("topics"),
+				code: v.string(),
+				depth: v.number(),
+				parentTopicId: v.optional(v.id("topics")),
+			}),
+		),
+	},
+	handler: async (ctx, args) => {
+		const now = Date.now();
+
+		for (const topic of args.topics) {
+			const existing = await ctx.db.get(topic.id);
+			if (
+				!existing ||
+				existing.userId !== args.userId ||
+				existing.subjectId !== args.subjectId
+			) {
+				throw new Error("Topic not found");
+			}
+		}
+
+		for (const topic of args.topics) {
+			await ctx.db.patch(topic.id, {
+				code: topic.code,
+				depth: topic.depth,
+				parentTopicId: topic.parentTopicId,
+				updatedAt: now,
+			});
+		}
+	},
+});
+
 export const deleteBySubject = mutation({
 	args: { subjectId: v.id("subjects"), userId: v.id("users") },
 	handler: async (ctx, args) => {
@@ -113,3 +172,97 @@ export const deleteBySubject = mutation({
 		}
 	},
 });
+
+export const remove = mutation({
+	args: { id: v.id("topics"), userId: v.id("users") },
+	handler: async (ctx, args) => {
+		const existing = await ctx.db.get(args.id);
+		if (!existing || existing.userId !== args.userId) {
+			throw new Error("Topic not found");
+		}
+
+		const subjectTopics = await ctx.db
+			.query("topics")
+			.withIndex("by_subject", (q) => q.eq("subjectId", existing.subjectId))
+			.collect();
+
+		const idsToDelete = new Set<string>([args.id]);
+		let changed = true;
+
+		while (changed) {
+			changed = false;
+			for (const topic of subjectTopics) {
+				if (
+					topic.userId === args.userId &&
+					topic.parentTopicId &&
+					idsToDelete.has(topic.parentTopicId) &&
+					!idsToDelete.has(topic._id)
+				) {
+					idsToDelete.add(topic._id);
+					changed = true;
+				}
+			}
+		}
+
+		for (const topicId of idsToDelete) {
+			await ctx.db.delete(topicId as never);
+		}
+
+		const remainingTopics = subjectTopics
+			.filter((topic) => topic.userId === args.userId && !idsToDelete.has(topic._id))
+			.sort(compareTopicDocsByCode);
+		const updates = buildRenumberedTopicUpdates(remainingTopics);
+
+		for (const update of updates) {
+			await ctx.db.patch(update.id, {
+				code: update.code,
+				updatedAt: Date.now(),
+			});
+		}
+	},
+});
+
+function buildRenumberedTopicUpdates(
+	topics: Array<{
+		_id: Id<"topics">;
+		code: string;
+		parentTopicId?: Id<"topics">;
+	}>,
+): Array<{ id: Id<"topics">; code: string }> {
+	const siblingCounter = new Map<string, number>();
+	const codes = new Map<Id<"topics">, string>();
+
+	return topics.map((topic) => {
+		const key = topic.parentTopicId ?? "__root__";
+		const count = (siblingCounter.get(key) ?? 0) + 1;
+		siblingCounter.set(key, count);
+
+		const parentCode = topic.parentTopicId
+			? (codes.get(topic.parentTopicId) ?? "")
+			: "";
+		const code = parentCode ? `${parentCode}.${count}` : `${count}`;
+		codes.set(topic._id, code);
+
+		return { id: topic._id, code };
+	});
+}
+
+function compareTopicDocsByCode(
+	a: { code: string },
+	b: { code: string },
+): number {
+	const aParts = a.code.split(".").map((part) => Number(part));
+	const bParts = b.code.split(".").map((part) => Number(part));
+	const maxLength = Math.max(aParts.length, bParts.length);
+
+	for (let i = 0; i < maxLength; i++) {
+		const aPart = aParts[i];
+		const bPart = bParts[i];
+
+		if (aPart === undefined) return -1;
+		if (bPart === undefined) return 1;
+		if (aPart !== bPart) return aPart - bPart;
+	}
+
+	return 0;
+}

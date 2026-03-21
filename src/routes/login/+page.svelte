@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from "$app/navigation";
 	import { browser } from "$app/environment";
+	import { Eye, EyeOff } from "lucide-svelte";
 	import {
 		getIsAuthenticated,
 		getAuthUserEmail,
@@ -27,15 +28,16 @@
 		getPlannerSettings,
 		initSettingsStore,
 		setImportanceEnabled,
+		loadSettingsFromConvex,
 	} from "$lib/stores/settings-store.svelte.js";
-	import { getConvexUrl } from "$lib/convex-client.js";
-	import { ConvexClient } from "convex/browser";
+	import { getConvexApi, getConvexClient, getConvexUrl } from "$lib/convex-client.js";
 	import { onMount } from "svelte";
 	import PageHeader from "$lib/components/PageHeader.svelte";
 
 	let isSignUp = $state(false);
 	let email = $state("");
 	let password = $state("");
+	let showPassword = $state(false);
 	let error = $state("");
 	let isSubmitting = $state(false);
 	let importStatus = $state("");
@@ -73,15 +75,15 @@
 
 		isSubmitting = true;
 		try {
-			const client = new ConvexClient(convexUrl);
+			const client = getConvexClient();
+			if (!client) {
+				error = "Convex client could not be created. Check PUBLIC_CONVEX_URL.";
+				return;
+			}
 
-			let api: any;
-			try {
-				const mod = await import("$lib/convex-api-loader.js");
-				api = mod.api;
-			} catch {
+			const api = await getConvexApi();
+			if (!api) {
 				error = "Convex API not generated. Run 'npx convex dev' first.";
-				isSubmitting = false;
 				return;
 			}
 
@@ -108,7 +110,10 @@
 		}
 	}
 
-	async function handlePostLogin(client: ConvexClient, api: any) {
+	async function handlePostLogin(
+		client: NonNullable<ReturnType<typeof getConvexClient>>,
+		api: NonNullable<Awaited<ReturnType<typeof getConvexApi>>>,
+	) {
 		const userId = (await import("$lib/stores/auth-store.svelte.js")).getAuthUserId();
 		if (!userId) return;
 
@@ -134,6 +139,7 @@
 				topics: localTopics.map((t) => ({
 					localId: t.id,
 					localSubjectId: t.subjectId,
+					localParentTopicId: t.parentTopicId ?? undefined,
 					code: t.code,
 					title: t.title,
 					depth: t.depth,
@@ -162,6 +168,7 @@
 		const repo = new ConvexRepository(client, userId, api);
 		setRepository(repo);
 		await refreshSubjects();
+		await loadSettingsFromConvex();
 
 		goto("/");
 	}
@@ -274,13 +281,28 @@
 
 			<div>
 				<label for="password" class="block text-xs font-medium text-neutral-500">Password</label>
-				<input
-					id="password"
-					type="password"
-					bind:value={password}
-					placeholder="At least 8 characters"
-					class="mt-1 block w-full rounded-lg border-0 bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-neutral-200 placeholder:text-neutral-300 focus:ring-2 focus:ring-neutral-400 focus:outline-none"
-				/>
+				<div class="relative mt-1">
+					<input
+						id="password"
+						type={showPassword ? "text" : "password"}
+						bind:value={password}
+						placeholder="At least 8 characters"
+						class="block w-full rounded-lg border-0 bg-white px-3 py-2.5 pr-11 text-sm shadow-sm ring-1 ring-neutral-200 placeholder:text-neutral-300 focus:ring-2 focus:ring-neutral-400 focus:outline-none"
+					/>
+					<button
+						type="button"
+						aria-label={showPassword ? "Hide password" : "Show password"}
+						aria-pressed={showPassword}
+						onclick={() => (showPassword = !showPassword)}
+						class="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-neutral-400 transition-colors hover:text-neutral-700"
+					>
+						{#if showPassword}
+							<EyeOff class="h-4 w-4" />
+						{:else}
+							<Eye class="h-4 w-4" />
+						{/if}
+					</button>
+				</div>
 			</div>
 
 			{#if error}

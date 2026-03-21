@@ -1,4 +1,5 @@
 import { browser } from "$app/environment";
+import { PUBLIC_CONVEX_URL } from "$env/static/public";
 import { ConvexClient } from "convex/browser";
 
 /**
@@ -14,7 +15,7 @@ let cachedApi: any = null;
 
 export function getConvexUrl(): string {
 	if (!browser) return "";
-	return (import.meta.env?.PUBLIC_CONVEX_URL as string) ?? "";
+	return PUBLIC_CONVEX_URL;
 }
 
 export function getConvexClient(): ConvexClient | null {

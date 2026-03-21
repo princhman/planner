@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from "svelte";
     import {
         getSubjects,
         getIsLoading,
@@ -23,7 +24,7 @@
     import { getIsAuthenticated } from "$lib/stores/auth-store.svelte.js";
     import { getPlannerSettings } from "$lib/stores/settings-store.svelte.js";
     import { buildTopicConfidenceSummary } from "$lib/topic-confidence.js";
-    import { Settings, Plus, ChevronRight } from "lucide-svelte";
+    import { Settings, Plus, ChevronRight, BookOpen } from "lucide-svelte";
     import ConfidenceBar from "$lib/components/ConfidenceBar.svelte";
 
     const subjects = $derived(getSubjects());
@@ -42,7 +43,9 @@
 
     // Session completion state
     let showComplete = $state(false);
-    let confidenceAfter = $state<ConfidenceLevel | null>(null);
+    let confidenceAfter = $state<ConfidenceLevel>(
+        recommendationConfidenceLevel(),
+    );
     let isCompleting = $state(false);
 
     // Up-next state
@@ -59,6 +62,7 @@
     let cachedLeafTopics = $state<Topic[]>([]);
     let cachedAllTopics = $state<Topic[]>([]);
     let cachedSubjects = $state<Subject[]>([]);
+    let recommendationRequestId = 0;
 
     $effect(() => {
         const subs = subjects;
@@ -67,16 +71,31 @@
 
         if (loading) return;
 
-        (async () => {
-            for (const s of subs) {
-                await refreshTopics(s.id);
-            }
-            if (subs.length > 0) {
-                await fetchRecommendation(importanceEnabled);
-            } else {
-                isLoadingRec = false;
-            }
-        })();
+        untrack(() =>
+            (async () => {
+                if (subs.length > 0) {
+                    const existingTopics = subs.flatMap((subject) =>
+                        getTopicsForSubject(subject.id),
+                    );
+
+                    if (existingTopics.length > 0) {
+                        await fetchRecommendation(importanceEnabled, {
+                            showSpinner: false,
+                        });
+                    }
+
+                    await Promise.all(subs.map((s) => refreshTopics(s.id)));
+                    await fetchRecommendation(importanceEnabled, {
+                        showSpinner: existingTopics.length === 0,
+                    });
+                } else {
+                    recommendation = null;
+                    recommendationTopic = null;
+                    upNextItems = [];
+                    isLoadingRec = false;
+                }
+            })(),
+        );
     });
 
     function buildCodePath(topic: Topic, allTopics: Topic[]): string {
@@ -94,6 +113,16 @@
         return CONFIDENCE_LABELS[confidence];
     }
 
+    function recommendationConfidenceLevel(): ConfidenceLevel {
+        if (!recommendationTopic) return "not_started";
+
+        const summary = buildTopicConfidenceSummary(cachedAllTopics);
+        return (
+            summary.effectiveConfidenceByTopicId.get(recommendationTopic.id) ??
+            recommendationTopic.confidence
+        );
+    }
+
     function formatLastReviewed(timestamp: number | null): string {
         if (!timestamp) return "Never reviewed";
 
@@ -107,58 +136,108 @@
 
     async function fetchRecommendation(
         importanceEnabled = plannerSettings.importanceEnabled,
+        options: {
+            showSpinner?: boolean;
+            excludeTopicIds?: Iterable<string>;
+        } = {},
     ) {
-        showComplete = false;
-        confidenceAfter = null;
-        isLoadingRec = true;
+        const requestId = ++recommendationRequestId;
+        const previousRecommendationTopicId = recommendation?.topicId ?? null;
+        if (options.showSpinner ?? true) {
+            isLoadingRec = true;
+        }
 
         try {
-            const { computeRecommendation, filterLeafTopics } =
-                await import("$lib/engine.js");
-            const { readTopics, readSubjects } =
-                await import("$lib/stores/local-storage.js");
-
-            const allTopics = readTopics();
-            const allSubjects = readSubjects();
+            const {
+                computeRecommendation,
+                computeRecommendationExcluding,
+                filterLeafTopics,
+            } = await import("$lib/engine.js");
+            const allSubjects = [...subjects];
+            const allTopics = allSubjects.flatMap((subject) =>
+                getTopicsForSubject(subject.id),
+            );
             const leafTopics = filterLeafTopics(allTopics);
+            const excludeTopicIds = new Set(skippedTopicIds);
+            for (const topicId of options.excludeTopicIds ?? []) {
+                excludeTopicIds.add(topicId);
+            }
 
             cachedLeafTopics = leafTopics;
             cachedAllTopics = allTopics;
             cachedSubjects = allSubjects;
 
-            recommendation = computeRecommendation(leafTopics, allSubjects, {
-                availableMinutes: 25,
-                now: nowTimestamp(),
-                importanceEnabled,
-            });
+            recommendation =
+                excludeTopicIds.size > 0
+                    ? computeRecommendationExcluding(
+                          leafTopics,
+                          allSubjects,
+                          {
+                              availableMinutes: 25,
+                              now: nowTimestamp(),
+                              importanceEnabled,
+                          },
+                          excludeTopicIds,
+                      )
+                    : computeRecommendation(leafTopics, allSubjects, {
+                          availableMinutes: 25,
+                          now: nowTimestamp(),
+                          importanceEnabled,
+                      });
+
+            if (
+                (recommendation?.topicId ?? null) !==
+                previousRecommendationTopicId
+            ) {
+                showComplete = false;
+                confidenceAfter = null;
+            }
 
             if (recommendation) {
-                const repo = getRepository();
-                const topic = await repo.getTopic(recommendation.topicId);
+                const topic =
+                    allTopics.find((t) => t.id === recommendation?.topicId) ??
+                    null;
                 recommendationTopic = topic;
                 topicName = topic?.title ?? "Unknown topic";
                 topicCode = topic ? buildCodePath(topic, allTopics) : "";
-                const subject = await repo.getSubject(recommendation.subjectId);
+                const subject =
+                    allSubjects.find(
+                        (item) => item.id === recommendation?.subjectId,
+                    ) ?? null;
                 subjectName = subject?.name ?? "Unknown subject";
             } else {
                 recommendationTopic = null;
+                topicName = "";
+                topicCode = "";
+                subjectName = "";
             }
 
-            await computeUpNext(importanceEnabled);
+            await computeUpNext(importanceEnabled, excludeTopicIds);
         } finally {
-            isLoadingRec = false;
+            if (requestId === recommendationRequestId) {
+                isLoadingRec = false;
+            }
         }
     }
 
     async function computeUpNext(
         importanceEnabled = plannerSettings.importanceEnabled,
+        additionalExcludedTopicIds: Iterable<string> = [],
     ) {
         const { computeRecommendationExcluding } =
             await import("$lib/engine.js");
-        const repo = getRepository();
         const items: UpNextItem[] = [];
+        const topicById = new Map(
+            cachedAllTopics.map((topic) => [topic.id, topic]),
+        );
+        const subjectById = new Map(
+            cachedSubjects.map((subject) => [subject.id, subject]),
+        );
 
         const excludeIds = new Set(skippedTopicIds);
+        for (const topicId of additionalExcludedTopicIds) {
+            excludeIds.add(topicId);
+        }
         if (recommendation) {
             excludeIds.add(recommendation.topicId);
         }
@@ -176,8 +255,8 @@
             );
             if (!rec) break;
 
-            const topic = await repo.getTopic(rec.topicId);
-            const subject = await repo.getSubject(rec.subjectId);
+            const topic = topicById.get(rec.topicId) ?? null;
+            const subject = subjectById.get(rec.subjectId) ?? null;
             items.push({
                 topicName: topic?.title ?? "Unknown topic",
                 topicCode: topic ? buildCodePath(topic, cachedAllTopics) : "",
@@ -199,34 +278,9 @@
                 recommendation.topicId,
             ]);
         }
-
-        const { computeRecommendationExcluding } =
-            await import("$lib/engine.js");
-
-        recommendation = computeRecommendationExcluding(
-            cachedLeafTopics,
-            cachedSubjects,
-            {
-                availableMinutes: 25,
-                now: nowTimestamp(),
-                importanceEnabled: plannerSettings.importanceEnabled,
-            },
-            skippedTopicIds,
-        );
-
-        if (recommendation) {
-            const repo = getRepository();
-            const topic = await repo.getTopic(recommendation.topicId);
-            recommendationTopic = topic;
-            topicName = topic?.title ?? "Unknown topic";
-            topicCode = topic ? buildCodePath(topic, cachedAllTopics) : "";
-            const subject = await repo.getSubject(recommendation.subjectId);
-            subjectName = subject?.name ?? "Unknown subject";
-        } else {
-            recommendationTopic = null;
-        }
-
-        await computeUpNext();
+        await fetchRecommendation(plannerSettings.importanceEnabled, {
+            showSpinner: false,
+        });
     }
 
     function handleStartComplete() {
@@ -236,6 +290,7 @@
     async function handleComplete() {
         if (!recommendation) return;
         isCompleting = true;
+        const completedTopicId = recommendation.topicId;
         try {
             await getRepository().completeStudySession({
                 subjectId: recommendation.subjectId,
@@ -246,8 +301,10 @@
             });
             await refreshTopics(recommendation.subjectId);
             showComplete = false;
-            skippedTopicIds = new Set();
-            await fetchRecommendation();
+            await fetchRecommendation(plannerSettings.importanceEnabled, {
+                showSpinner: false,
+                excludeTopicIds: [completedTopicId],
+            });
         } finally {
             isCompleting = false;
         }
@@ -309,6 +366,13 @@
                 title="Add subject"
             >
                 <Plus size={18} />
+            </a>
+            <a
+                href="/journal"
+                class="rounded-lg p-1.5 text-neutral-300 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+                title="Journal"
+            >
+                <BookOpen size={18} />
             </a>
             <a
                 href="/login"
@@ -453,27 +517,22 @@
 
                     {#if showComplete}
                         <div class="mt-4 space-y-3">
-                            <p class="text-sm text-neutral-600">
-                                How confident do you feel now?
-                            </p>
                             <div class="flex items-center gap-3">
                                 <ConfidenceBar
-                                    value={confidenceAfter ?? "not_started"}
+                                    value={confidenceAfter ??
+                                        recommendationConfidenceLevel()}
                                     onchange={(level) =>
                                         (confidenceAfter = level)}
                                     size="md"
                                 />
-                                <span class="text-xs text-neutral-400">
-                                    {confidenceAfter
-                                        ? CONFIDENCE_LABELS[confidenceAfter]
-                                        : "Select level"}
-                                </span>
+                                <p class="font-medium text-xs">
+                                    {CONFIDENCE_LABELS[confidenceAfter]}
+                                </p>
                             </div>
                             <div class="flex items-center justify-end gap-3">
                                 <button
                                     onclick={() => {
                                         showComplete = false;
-                                        confidenceAfter = null;
                                     }}
                                     class="text-sm text-neutral-400 transition-colors hover:text-neutral-600"
                                 >
@@ -481,7 +540,8 @@
                                 </button>
                                 <button
                                     onclick={handleComplete}
-                                    disabled={isCompleting}
+                                    disabled={isCompleting ||
+                                        confidenceAfter === null}
                                     class="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-700 disabled:opacity-50"
                                 >
                                     {isCompleting ? "Saving..." : "Save"}

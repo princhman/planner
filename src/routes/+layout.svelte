@@ -1,6 +1,5 @@
 <script lang="ts">
 	import "./layout.css";
-	import favicon from "$lib/assets/favicon.svg";
 	import { initializePlannerStore } from "$lib/stores/planner-store.svelte.js";
 	import { initAuthStore } from "$lib/stores/auth-store.svelte.js";
 	import { initSettingsStore } from "$lib/stores/settings-store.svelte.js";
@@ -11,12 +10,15 @@
 	onMount(() => {
 		initAuthStore();
 		initSettingsStore();
-		initializePlannerStore();
+		void initializePlannerStore();
 	});
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+	<link rel="shortcut icon" href="/favicon-32.png" />
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+	<link rel="manifest" href="/site.webmanifest" />
 	<title>Revision Planner</title>
 	<meta name="description" content="Local-first revision planner — what should I study?" />
 	<meta name="theme-color" content="#fafafa" />

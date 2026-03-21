@@ -22,6 +22,7 @@ export const importLocalData = mutation({
 			v.object({
 				localId: v.string(),
 				localSubjectId: v.string(),
+				localParentTopicId: v.optional(v.string()),
 				code: v.string(),
 				title: v.string(),
 				depth: v.number(),
@@ -63,10 +64,14 @@ export const importLocalData = mutation({
 			subjectIdMap.set(s.localId, id);
 		}
 
-		// Import topics
+		// Import topics in outline order so parent topic IDs are available
+		// before their children are inserted.
 		for (const t of args.topics) {
 			const subjectId = subjectIdMap.get(t.localSubjectId);
 			if (!subjectId) continue;
+			const parentTopicId = t.localParentTopicId
+				? topicIdMap.get(t.localParentTopicId)
+				: undefined;
 
 			const id = await ctx.db.insert("topics", {
 				userId: args.userId,
@@ -74,7 +79,7 @@ export const importLocalData = mutation({
 				code: t.code,
 				title: t.title,
 				depth: t.depth,
-				parentTopicId: undefined,
+				parentTopicId: parentTopicId as any,
 				importance: t.importance,
 				confidence: t.confidence,
 				lastStudiedAt: t.lastStudiedAt,

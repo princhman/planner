@@ -1,6 +1,9 @@
 import { browser } from "$app/environment";
+import { getConvexApi, getConvexClient } from "$lib/convex-client.js";
 import type { PlannerRepository } from "$lib/repository.js";
 import { LocalRepository } from "./local-repository.js";
+import { ConvexRepository } from "./convex-repository.js";
+import { getAuthUserId } from "./auth-store.svelte.js";
 import type { Subject, Topic } from "$lib/types.js";
 
 /**
@@ -18,14 +21,37 @@ let subjects = $state<Subject[]>([]);
 let topicsBySubject = $state<Record<string, Topic[]>>({});
 let isLoading = $state(true);
 
+async function createRepository(): Promise<PlannerRepository> {
+	const userId = getAuthUserId();
+	if (!userId) {
+		return new LocalRepository();
+	}
+
+	const client = getConvexClient();
+	if (!client) {
+		return new LocalRepository();
+	}
+
+	const api = await getConvexApi();
+	if (!api) {
+		return new LocalRepository();
+	}
+
+	return new ConvexRepository(client, userId, api);
+}
+
 // Initialize from storage (browser-only)
 export async function initializePlannerStore(): Promise<void> {
 	if (!browser) return;
 	isLoading = true;
 	try {
+		repository = await createRepository();
 		subjects = await repository.listSubjects();
+		topicsBySubject = {};
 	} catch {
+		repository = new LocalRepository();
 		subjects = [];
+		topicsBySubject = {};
 	}
 	isLoading = false;
 }
@@ -33,6 +59,7 @@ export async function initializePlannerStore(): Promise<void> {
 // Switch to a different repository (e.g., Convex after login)
 export function setRepository(repo: PlannerRepository): void {
 	repository = repo;
+	topicsBySubject = {};
 }
 
 export function getRepository(): PlannerRepository {

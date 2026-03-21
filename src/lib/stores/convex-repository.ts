@@ -109,7 +109,7 @@ export class ConvexRepository implements PlannerRepository {
 			subjectId,
 			userId: this.userId,
 		});
-		return docs.map(this.docToTopic);
+		return docs.map(this.docToTopic).sort(compareTopicsByCode);
 	}
 
 	async getTopic(id: string): Promise<Topic | null> {
@@ -121,7 +121,7 @@ export class ConvexRepository implements PlannerRepository {
 	}
 
 	async importTopics(input: ImportTopicsInput): Promise<Topic[]> {
-		const ids = await this.client.mutation(this.api.topics.importBatch, {
+		await this.client.mutation(this.api.topics.importBatch, {
 			userId: this.userId,
 			subjectId: input.subjectId,
 			topics: input.topics.map((t) => ({
@@ -136,7 +136,7 @@ export class ConvexRepository implements PlannerRepository {
 			subjectId: input.subjectId,
 			userId: this.userId,
 		});
-		return docs.map(this.docToTopic);
+		return docs.map(this.docToTopic).sort(compareTopicsByCode);
 	}
 
 	async updateTopicRating(input: UpdateTopicRatingInput): Promise<Topic> {
@@ -177,7 +177,7 @@ export class ConvexRepository implements PlannerRepository {
 			subjectId: input.subjectId,
 			userId: this.userId,
 		});
-		return docs.map(this.docToTopic);
+		return docs.map(this.docToTopic).sort(compareTopicsByCode);
 	}
 
 	async reorganizeTopics(input: ReorganizeTopicsInput): Promise<Topic[]> {
@@ -195,7 +195,7 @@ export class ConvexRepository implements PlannerRepository {
 			subjectId: input.subjectId,
 			userId: this.userId,
 		});
-		return docs.map(this.docToTopic);
+		return docs.map(this.docToTopic).sort(compareTopicsByCode);
 	}
 
 	async deleteTopic(topicId: string): Promise<void> {
@@ -276,7 +276,7 @@ export class ConvexRepository implements PlannerRepository {
 		const docs = await this.client.query(this.api.topics.listByUser, {
 			userId: this.userId,
 		});
-		return docs.map(this.docToTopic);
+		return docs.map(this.docToTopic).sort(compareTopicsByCode);
 	}
 
 	private docToSubject(doc: any): Subject {
@@ -319,4 +319,21 @@ export class ConvexRepository implements PlannerRepository {
 			confidenceAfter: (doc.confidenceAfter as ConfidenceLevel) ?? null,
 		};
 	}
+}
+
+function compareTopicsByCode(a: Topic, b: Topic): number {
+	const aParts = a.code.split(".").map((part) => Number(part));
+	const bParts = b.code.split(".").map((part) => Number(part));
+	const maxLength = Math.max(aParts.length, bParts.length);
+
+	for (let i = 0; i < maxLength; i++) {
+		const aPart = aParts[i];
+		const bPart = bParts[i];
+
+		if (aPart === undefined) return -1;
+		if (bPart === undefined) return 1;
+		if (aPart !== bPart) return aPart - bPart;
+	}
+
+	return 0;
 }

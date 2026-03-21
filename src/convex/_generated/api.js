@@ -1,25 +1,23 @@
+/* eslint-disable */
 /**
- * Stub file — will be overwritten by `npx convex dev`.
+ * Generated `api` utility.
  *
- * This placeholder allows the SvelteKit build to succeed
- * before a Convex deployment is configured.
+ * THIS CODE IS AUTOMATICALLY GENERATED.
+ *
+ * To regenerate, run `npx convex dev`.
+ * @module
  */
 
-/* eslint-disable */
-// @ts-nocheck
+import { anyApi, componentsGeneric } from "convex/server";
 
-export const api = new Proxy(
-	{},
-	{
-		get(_target, prop) {
-			return new Proxy(
-				{},
-				{
-					get(_t, method) {
-						return `${String(prop)}.${String(method)}`;
-					},
-				},
-			);
-		},
-	},
-);
+/**
+ * A utility for referencing Convex functions in your app's API.
+ *
+ * Usage:
+ * ```js
+ * const myFunctionReference = api.myModule.myFunction;
+ * ```
+ */
+export const api = anyApi;
+export const internal = anyApi;
+export const components = componentsGeneric();
