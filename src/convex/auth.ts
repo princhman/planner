@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server.js";
 
 /**
@@ -11,84 +11,77 @@ import { mutation, query } from "./_generated/server.js";
 
 // Simple hash function for MVP (not production-grade)
 function simpleHash(password: string): string {
-	let hash = 0;
-	for (let i = 0; i < password.length; i++) {
-		const char = password.charCodeAt(i);
-		hash = ((hash << 5) - hash + char) | 0;
-	}
-	return `hash_${hash.toString(36)}_${password.length}`;
+  let hash = 0;
+  for (let i = 0; i < password.length; i++) {
+    const char = password.charCodeAt(i);
+    hash = ((hash << 5) - hash + char) | 0;
+  }
+  return `hash_${hash.toString(36)}_${password.length}`;
 }
 
 export const signUp = mutation({
-	args: {
-		email: v.string(),
-		password: v.string(),
-	},
-	handler: async (ctx, args) => {
-		const email = args.email.toLowerCase().trim();
+  args: {
+    email: v.string(),
+    password: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const email = args.email.toLowerCase().trim();
 
-		// Check if email already exists
-		const existing = await ctx.db
-			.query("users")
-			.withIndex("by_email", (q) => q.eq("email", email))
-			.first();
+    // Check if email already exists
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
 
-		if (existing) {
-			throw new Error("An account with this email already exists.");
-		}
+    if (existing) {
+      throw new Error("An account with this email already exists.");
+    }
 
-		if (args.password.length < 8) {
-			throw new Error("Password must be at least 8 characters.");
-		}
+    if (args.password.length < 8) {
+      throw new Error("Password must be at least 8 characters.");
+    }
 
-		const userId = await ctx.db.insert("users", {
-			email,
-			passwordHash: simpleHash(args.password),
-			createdAt: Date.now(),
-		});
+    const userId = await ctx.db.insert("users", {
+      email,
+      passwordHash: simpleHash(args.password),
+      createdAt: Date.now(),
+    });
 
-		return userId;
-	},
+    return userId;
+  },
 });
 
 export const signIn = mutation({
-	args: {
-		email: v.string(),
-		password: v.string(),
-	},
-	handler: async (ctx, args) => {
-		const email = args.email.toLowerCase().trim();
+  args: {
+    email: v.string(),
+    password: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const email = args.email.toLowerCase().trim();
 
-		const user = await ctx.db
-			.query("users")
-			.withIndex("by_email", (q) => q.eq("email", email))
-			.first();
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
 
-		if (!user || user.passwordHash !== simpleHash(args.password)) {
-			throw new Error("Invalid email or password.");
-		}
+    if (!user) {
+      throw new ConvexError({
+        message: "User with this email does not exist.",
+      });
+    }
 
-		return user._id;
-	},
+    if (user.passwordHash != simpleHash(args.password)) {
+      throw new ConvexError({ message: "The password is incorrect." });
+    }
+    return user._id;
+  },
 });
 
 export const getUser = query({
-	args: { userId: v.id("users") },
-	handler: async (ctx, args) => {
-		const user = await ctx.db.get(args.userId);
-		if (!user) return null;
-		return { id: user._id, email: user.email, createdAt: user.createdAt };
-	},
-});
-
-// Check if user has any data (for first-login import decision)
-export const hasData = query({
-	args: { userId: v.id("users") },
-	handler: async (ctx, args) => {
-		const firstSubject = await ctx.db
-			.query("subjects")
-			.withIndex("by_user", (q) => q.eq("userId", args.userId))
-			.first();
-		return firstSubject !== null;
-	},
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) return null;
+    return { id: user._id, email: user.email, createdAt: user.createdAt };
+  },
 });

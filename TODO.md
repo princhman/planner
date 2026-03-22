@@ -1,0 +1,9 @@
+- [ ] Creating subjects
+  - [ ] uploading topics
+  - [ ] managing subject
+    - [ ] editing topics
+    - [ ] changing the subject detail
+- [ ] confidence rating
+- [ ] algorithm to suggest
+- [ ] sessions
+- [ ] journal

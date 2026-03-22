@@ -17,6 +17,7 @@
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.1.18",
+    "@types/node": "^25.5.0",
     "svelte": "^5.51.0",
     "svelte-check": "^4.4.2",
     "tailwindcss": "^4.1.18",
@@ -24,6 +25,7 @@
     "vite": "^7.3.1"
   },
   "dependencies": {
+    "@convex-dev/workos-authkit": "^0.1.7",
     "@sveltejs/adapter-vercel": "^6.3.3",
     "bits-ui": "^2.16.3",
     "clsx": "^2.1.1",
