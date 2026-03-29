@@ -9,42 +9,70 @@
         today,
         type CalendarDate,
     } from "@internationalized/date";
+    import Input from "./ui/input/input.svelte";
+    import { authState } from "$lib/stores/auth-store.svelte";
+    import { useConvexClient } from "convex-svelte";
+    import { api } from "$convex/_generated/api";
 
-    const id = $props.id();
+    let date = $state<CalendarDate | undefined>();
+    let name = $state<string>("");
+    let isCreating = $state<boolean>(false);
 
     let open = $state(false);
-    let value = $state<CalendarDate | undefined>();
-    let name = $state("");
-    let dateStingUTC = $state("");
+
+    const userId = $derived(authState.userId);
+    const client = useConvexClient();
+
+    async function create() {
+        isCreating = true;
+        if (userId) {
+            await client.mutation(api.subjects.create, {
+                examDate: date?.toString() ?? "",
+                userId: userId,
+                name,
+            });
+            console.log("Created");
+        }
+        isCreating = false;
+    }
 </script>
 
-<div class="flex flex-col gap-3">
-    <Label for="{id}-date" class="px-1">Date of birth</Label>
-    <Popover.Root bind:open>
-        <Popover.Trigger id="{id}-date">
-            {#snippet child({ props })}
+<div class="flex flex-col max-w-96 gap-2">
+    <div class="flex gap-3">
+        <Label for="name" class="px-1 ">Name</Label>
+        <Input id="name" bind:value={name} type="text" class="font-normal"
+        ></Input>
+    </div>
+    <div class="flex gap-3">
+        <Label for="date" class="px-1">Exam date</Label>
+        <Popover.Root bind:open>
+            <Popover.Trigger id="date">
                 <Button
-                    {...props}
                     variant="outline"
-                    class="w-48 justify-between font-normal"
+                    class="w-full justify-between font-normal"
                 >
-                    {value
-                        ? value.toDate(getLocalTimeZone()).toLocaleDateString()
+                    {date
+                        ? date.toDate(getLocalTimeZone()).toLocaleDateString()
                         : "Select date"}
                     <ChevronDownIcon />
                 </Button>
-            {/snippet}
-        </Popover.Trigger>
-        <Popover.Content class="w-auto overflow-hidden p-0" align="start">
-            <Calendar
-                type="single"
-                bind:value
-                captionLayout="dropdown"
-                onValueChange={() => {
-                    open = false;
-                }}
-                maxValue={today(getLocalTimeZone())}
-            />
-        </Popover.Content>
-    </Popover.Root>
+            </Popover.Trigger>
+            <Popover.Content class="w-auto overflow-hidden p-0" align="start">
+                <Calendar
+                    type="single"
+                    bind:value={date}
+                    captionLayout="dropdown"
+                    onValueChange={() => {
+                        open = false;
+                    }}
+                    minValue={today(getLocalTimeZone())}
+                />
+            </Popover.Content>
+        </Popover.Root>
+    </div>
+</div>
+<div class="flex justify-end">
+    <Button class="px-4 py-2 font-bold" onclick={create}
+        >{isCreating ? "Creating..." : "Create"}
+    </Button>
 </div>
