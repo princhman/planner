@@ -28,6 +28,7 @@
         },
         data: {
             title: topic.title,
+            order: topic.order,
         },
     });
 </script>
@@ -40,5 +41,5 @@
         ? 'bg-gray-700'
         : ''}"
 >
-    {topic.title}
+    {topic.order}. {topic.title}
 </div>

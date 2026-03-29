@@ -27,14 +27,23 @@
 
     const { dbTopics, update }: Props = $props();
 
+    let dragging = $state(false);
     let topics: Topic[] = $state(prepareForRender(dbTopics));
     let oldTopics: Topic[] = [];
+
+    // resync from DB when not dragging (optimistic updates, other clients, etc.)
+    //
+    $effect(() => {
+        if (dragging) return;
+        topics = prepareForRender(dbTopics);
+    });
 
     let descendants: Topic[] = $state([]);
     let initialDepth: number = $state(0);
 
     function onDragStart(...[event]: Parameters<DragStartEvent>) {
         const source = event.operation.source;
+        dragging = true;
         oldTopics = [...topics];
         if (!source) return;
 
@@ -85,6 +94,7 @@
 
     // recalculate parentIds from the final depth/order
     function onDragEnd(...[event]: Parameters<DragEndEvent>) {
+        dragging = false;
         if (event.canceled) {
             descendants = [];
             return;
@@ -107,9 +117,9 @@
         ];
         descendants = [];
 
-        // derive correct parentId + order from visual position + depth
-        const finalized = finaliseOrder(merged);
-        const diff = getDiff(oldTopics, finalized);
+        // fix the order
+        const finalised = finaliseOrder(merged);
+        const diff = getDiff(oldTopics, finalised);
 
         if (diff.length > 0) {
             update(diff);
@@ -155,6 +165,7 @@
     <DragOverlay>
         {#snippet children(source)}
             <DndOverlay
+                order={source.data.order!}
                 title={source.data.title!}
                 childrenNumber={descendants.length + 1}
             />
