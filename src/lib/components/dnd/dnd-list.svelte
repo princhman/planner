@@ -4,11 +4,12 @@
     import {
         getProjection,
         getDescendants,
-        flattenTree,
-        buildTree,
+        prepareForRender,
+        finaliseOrder,
+        getDiff,
     } from "./utils";
 
-    import type { FlatTopic, Topic } from "./types";
+    import type { Topic } from "./types";
     import type {
         DragStartEvent,
         DragOverEvent,
@@ -17,57 +18,36 @@
     } from "@dnd-kit/dom";
     import DndOverlay from "./dnd-overlay.svelte";
     import { move } from "@dnd-kit/helpers";
+    import type { Doc } from "$convex/_generated/dataModel";
 
-    let topics: Topic[] = [
-        {
-            id: "1",
-            title: "Algebra 1",
-            children: [
-                {
-                    id: "2",
-                    title: "Adding",
-                    children: [
-                        {
-                            id: "7",
-                            title: "Basic Addition",
-                            children: [],
-                        },
-                    ],
-                },
-            ],
-        },
-        {
-            id: "4",
-            title: "Algebra 2",
-            children: [
-                {
-                    id: "5",
-                    title: "Multiplying",
-                    children: [],
-                },
-            ],
-        },
-    ];
+    interface Props {
+        dbTopics: Doc<"topics">[];
+        update: (topics: Topic[]) => void;
+    }
 
-    let flatTopics: FlatTopic[] = $state(flattenTree(topics));
+    const { dbTopics, update }: Props = $props();
 
-    let descendants: FlatTopic[] = $state([]);
+    let topics: Topic[] = $state(prepareForRender(dbTopics));
+    let oldTopics: Topic[] = [];
+
+    let descendants: Topic[] = $state([]);
     let initialDepth: number = $state(0);
 
     function onDragStart(...[event]: Parameters<DragStartEvent>) {
         const source = event.operation.source;
+        oldTopics = [...topics];
         if (!source) return;
 
-        const index = flatTopics.findIndex(
+        const index = topics.findIndex(
             (topic) => topic.id === source.id.toString(),
         );
-        initialDepth = flatTopics[index].depth;
-        descendants = getDescendants(flatTopics, index);
+        initialDepth = topics[index].depth;
+        descendants = getDescendants(topics, index);
 
         const descendantsIds = descendants.map((topic) => topic.id);
 
         // find all descendants
-        flatTopics = flatTopics.filter((topic) => {
+        topics = topics.filter((topic) => {
             return !descendantsIds.includes(topic.id); // not sure exactly how it compares, maybe need to change later
         });
     }
@@ -83,22 +63,22 @@
             const dragDepth = Math.round(offsetLeft / 24); // 24 is hardcoded
             const projectedDepth = initialDepth + dragDepth;
 
-            flatTopics = move(flatTopics, event);
+            topics = move(topics, event);
 
-            const sourceIdx = flatTopics.findIndex(
+            const sourceIdx = topics.findIndex(
                 (topic) => topic.id === source.id.toString(),
             );
 
             const { depth, parentId } = getProjection(
-                flatTopics,
+                topics,
                 source.id.toString(),
                 projectedDepth,
             );
 
-            flatTopics[sourceIdx] = {
-                ...flatTopics[sourceIdx],
+            topics[sourceIdx] = {
+                ...topics[sourceIdx],
                 depth,
-                parentId,
+                parentId: parentId ?? undefined,
             };
         }
     }
@@ -106,13 +86,34 @@
     // recalculate parentIds from the final depth/order
     function onDragEnd(...[event]: Parameters<DragEndEvent>) {
         if (event.canceled) {
-            flatTopics = flattenTree(topics);
             descendants = [];
             return;
         }
-        topics = buildTree([...flatTopics, ...descendants]);
-        flatTopics = flattenTree(topics);
+
+        // re-insert descendants right after the dragged item,
+        // adjusting their depths by how much the dragged item moved
+        const sourceIdx = topics.findIndex(
+            (t) => t.id === event.operation.source?.id.toString(),
+        );
+        const depthDelta = topics[sourceIdx].depth - initialDepth;
+        const adjusted = descendants.map((d) => ({
+            ...d,
+            depth: d.depth + depthDelta,
+        }));
+        const merged = [
+            ...topics.slice(0, sourceIdx + 1),
+            ...adjusted,
+            ...topics.slice(sourceIdx + 1),
+        ];
         descendants = [];
+
+        // derive correct parentId + order from visual position + depth
+        const finalized = finaliseOrder(merged);
+        const diff = getDiff(oldTopics, finalized);
+
+        if (diff.length > 0) {
+            update(diff);
+        }
     }
 
     // horizontal movement to snap between possible projections
@@ -126,20 +127,20 @@
 
             // flatTopics = move(flatTopics, event);
 
-            const sourceIdx = flatTopics.findIndex(
+            const sourceIdx = topics.findIndex(
                 (topic) => topic.id === source.id.toString(),
             );
 
             const { depth, parentId } = getProjection(
-                flatTopics,
+                topics,
                 source.id.toString(),
                 projectedDepth,
             );
 
-            flatTopics[sourceIdx] = {
-                ...flatTopics[sourceIdx],
+            topics[sourceIdx] = {
+                ...topics[sourceIdx],
                 depth,
-                parentId,
+                parentId: parentId ?? undefined,
             };
         }
     }
@@ -147,7 +148,7 @@
 
 <DragDropProvider {onDragOver} {onDragEnd} {onDragStart} {onDragMove}>
     <div>
-        {#each flatTopics as topic, index (topic.id)}
+        {#each topics as topic, index (topic._id)}
             <DndItem {topic} {index} />
         {/each}
     </div>

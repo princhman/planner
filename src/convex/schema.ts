@@ -21,14 +21,14 @@ export default defineSchema({
     subjectId: v.id("subjects"),
     title: v.string(),
     order: v.number(), // starts at 1
-    parentTopicId: v.optional(v.id("topics")),
+    parentId: v.optional(v.id("topics")),
     importance: v.number(),
     confidence: v.string(),
     lastRecallAt: v.optional(v.number()),
   })
     .index("by_subject", ["subjectId"])
     .index("by_user", ["userId"])
-    .index("by_subject_parenId_order", ["subjectId", "parentTopicId", "order"]),
+    .index("by_subject_parenId_order", ["subjectId", "parentId", "order"]),
 
   studySessions: defineTable({
     userId: v.id("users"),

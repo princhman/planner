@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { FlatTopic } from "./types";
+    import type { Topic } from "./types";
     import { createSortable } from "@dnd-kit/svelte/sortable";
 
     const config = {
@@ -13,7 +13,7 @@
     } as const;
 
     interface Props {
-        topic: FlatTopic;
+        topic: Topic;
         index: number;
     }
     const { topic, index }: Props = $props();

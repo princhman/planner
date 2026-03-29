@@ -21,16 +21,14 @@ export const add = mutation({
     userId: v.id("users"),
     subjectId: v.id("subjects"),
     title: v.string(),
-    parentTopicId: v.optional(v.id("topics")),
+    parentId: v.optional(v.id("topics")),
   },
   handler: async (ctx, args) => {
     // order starts at 1
     const topicWithMaxOrder = await ctx.db
       .query("topics")
       .withIndex("by_subject_parenId_order", (q) =>
-        q
-          .eq("subjectId", args.subjectId)
-          .eq("parentTopicId", args.parentTopicId),
+        q.eq("subjectId", args.subjectId).eq("parentId", args.parentId),
       )
       .order("desc")
       .first();
@@ -41,7 +39,7 @@ export const add = mutation({
       subjectId: args.subjectId,
       order: order,
       title: args.title,
-      parentTopicId: args.parentTopicId,
+      parentId: args.parentId,
       importance: 3,
       confidence: "not_started",
       lastRecallAt: undefined,
@@ -72,21 +70,21 @@ export const updateRating = mutation({
 
 export const update = mutation({
   args: {
-    id: v.id("topics"),
-    userId: v.id("users"),
-    title: v.optional(v.string()),
-    code: v.optional(v.string()),
+    updates: v.array(
+      v.object({
+        id: v.id("topics"),
+        parentId: v.optional(v.id("topics")),
+        order: v.number(),
+      }),
+    ),
   },
-  handler: async (ctx, args) => {
-    const existing = await ctx.db.get(args.id);
-    if (!existing || existing.userId !== args.userId) {
-      throw new Error("Topic not found");
+  handler: async (ctx, { updates }) => {
+    for (const u of updates) {
+      await ctx.db.patch(u.id, {
+        parentId: u.parentId,
+        order: u.order,
+      });
     }
-
-    const updates: Record<string, unknown> = { updatedAt: Date.now() };
-    if (args.title !== undefined) updates.title = args.title;
-    if (args.code !== undefined) updates.code = args.code;
-    await ctx.db.patch(args.id, updates);
   },
 });
 
