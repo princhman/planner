@@ -18,21 +18,58 @@
     } from "@dnd-kit/dom";
     import DndOverlay from "./dnd-overlay.svelte";
     import { move } from "@dnd-kit/helpers";
-    import type { Doc } from "$convex/_generated/dataModel";
+    import type { Doc, Id } from "$convex/_generated/dataModel";
+    import { slide } from "svelte/transition";
+    import { browser } from "$app/environment";
 
     interface Props {
         dbTopics: Doc<"topics">[];
         update: (topics: Topic[]) => void;
+        subjectId: string;
     }
 
-    const { dbTopics, update }: Props = $props();
+    const { dbTopics, update, subjectId }: Props = $props();
 
     let dragging = $state(false);
     let topics: Topic[] = $state(prepareForRender(dbTopics));
+
     let oldTopics: Topic[] = [];
+    let collapsedIds: Set<Id<"topics">> = $state(new Set<Id<"topics">>());
+
+    // getting the preserved state
+    if (browser) {
+        try {
+            const raw = localStorage.getItem(subjectId + "-topics");
+            const parsed = raw ? (JSON.parse(raw) as Id<"topics">[]) : [];
+            collapsedIds = new Set(parsed);
+        } catch {
+            collapsedIds = new Set();
+        }
+    }
+
+    // preserving a state
+    $effect(() => {
+        localStorage.setItem(
+            subjectId + "-topics",
+            JSON.stringify(Array.from(collapsedIds)),
+        );
+    });
+
+    let hiddenIds = $derived.by(() => {
+        const set = new Set<Id<"topics">>();
+        topics.forEach((topic) => {
+            if (
+                topic.parentId &&
+                (collapsedIds.has(topic.parentId) || set.has(topic.parentId))
+            ) {
+                set.add(topic.id);
+            }
+        });
+        return set;
+    });
 
     // resync from DB when not dragging (optimistic updates, other clients, etc.)
-    //
+    // updates only on change of dragging or dbTopics
     $effect(() => {
         if (dragging) return;
         topics = prepareForRender(dbTopics);
@@ -154,12 +191,42 @@
             };
         }
     }
+
+    function toggleCollapse(topicId: Id<"topics">) {
+        // creating new one because only reassigning will triger the update
+        const nextCollapsed = new Set(collapsedIds);
+        if (collapsedIds.has(topicId)) {
+            nextCollapsed.delete(topicId);
+        } else {
+            nextCollapsed.add(topicId);
+        }
+        collapsedIds = nextCollapsed;
+    }
+
+    function canCollapse(index: number) {
+        const topic = topics[index];
+        const next = topics[index + 1];
+        if (!next) return false;
+        return topic.id === next.parentId;
+    }
 </script>
 
 <DragDropProvider {onDragOver} {onDragEnd} {onDragStart} {onDragMove}>
     <div>
         {#each topics as topic, index (topic._id)}
-            <DndItem {topic} {index} />
+            {#if !hiddenIds.has(topic.id)}
+                <div
+                    transition:slide={dragging ? undefined : { duration: 100 }}
+                >
+                    <DndItem
+                        {topic}
+                        {index}
+                        isCollapsed={collapsedIds.has(topic.id)}
+                        {toggleCollapse}
+                        canCollapse={canCollapse(index)}
+                    />
+                </div>
+            {/if}
         {/each}
     </div>
     <DragOverlay>

@@ -57,9 +57,7 @@
                     );
                     if (!existing) return;
 
-                    const byId = new Map(
-                        updates.map((u) => [u.id, u]),
-                    );
+                    const byId = new Map(updates.map((u) => [u.id, u]));
                     const next = existing.map((topic) => {
                         const patch = byId.get(topic._id);
                         if (!patch) return topic;
@@ -84,12 +82,21 @@
 {#if subject}
     <p>{subject.data?.name}</p>
 {/if}
+<div class="flex">
+    <Input
+        bind:value={topicTitle}
+        onkeydown={(e) => e.key === "Enter" && addTopic()}
+    />
+    <Button onclick={addTopic}>Add</Button>
+</div>
 {#if topics.data}
     {#if topics.data.length > 0}
-        <DndList dbTopics={topics.data} update={updateTopics} />
+        <DndList
+            dbTopics={topics.data}
+            update={updateTopics}
+            subjectId={params.id}
+        />
     {:else}
         <p>No topics found.</p>
     {/if}
 {/if}
-<Input bind:value={topicTitle}></Input>
-<Button onclick={addTopic}>Add</Button>
