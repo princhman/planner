@@ -22,26 +22,14 @@ export default defineSchema({
     title: v.string(),
     order: v.number(), // starts at 1
     parentId: v.optional(v.id("topics")),
-    importance: v.number(),
-    confidence: v.string(),
+    // importance: v.number(), // 1-5 inclusive
+    confidence: v.number(), // 1-5 inclusive (meanings are in confidence-selector)
     lastRecallAt: v.optional(v.number()),
   })
     .index("by_subject", ["subjectId"])
     .index("by_user", ["userId"])
+    .index("by_parentId", ["parentId"])
     .index("by_subject_parenId_order", ["subjectId", "parentId", "order"]),
-
-  studySessions: defineTable({
-    userId: v.id("users"),
-    subjectId: v.id("subjects"),
-    topicId: v.id("topics"),
-    actionType: v.string(),
-    plannedMinutes: v.number(),
-    completedAt: v.number(),
-    confidenceBefore: v.string(),
-    confidenceAfter: v.optional(v.string()),
-  })
-    .index("by_user", ["userId"])
-    .index("by_subject", ["subjectId"]),
 
   userPreferences: defineTable({
     userId: v.id("users"),

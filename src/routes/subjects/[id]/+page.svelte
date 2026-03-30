@@ -80,16 +80,25 @@
 </script>
 
 {#if subject}
-    <p>{subject.data?.name}</p>
+    <div class="gap-1 flex">
+        <a href="/">Home</a>
+        <p>{" > "}</p>
+        <p>{subject.data?.name}</p>
+    </div>
 {/if}
 <div class="flex">
     <Input
         bind:value={topicTitle}
-        onkeydown={(e) => e.key === "Enter" && addTopic()}
+        onkeydown={(e) =>
+            e.key === "Enter" && topicTitle.trim() !== "" && addTopic()}
     />
-    <Button onclick={addTopic}>Add</Button>
+    <Button disabled={!topicTitle.trim()} onclick={addTopic}>Add</Button>
 </div>
 {#if topics.data}
+    <p class="text-gray-500">
+        In summaries, a topic that has subtopics is counted using the lowest
+        confidence level of its subtopics.
+    </p>
     {#if topics.data.length > 0}
         <DndList
             dbTopics={topics.data}

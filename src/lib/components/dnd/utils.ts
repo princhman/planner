@@ -1,4 +1,4 @@
-import type { Topic } from "./types";
+import type { ConfidenceCounts, Topic } from "./types";
 import type { Doc, Id } from "$convex/_generated/dataModel";
 
 // finds where by drag the item can be
@@ -68,11 +68,31 @@ export function prepareForRender(topics: Doc<"topics">[]): Topic[] {
   const result: Topic[] = [];
   function walk(parentId: Id<"topics"> | null, depth: number) {
     for (const topic of childrenOf.get(parentId) ?? []) {
-      result.push({ ...topic, depth, id: topic._id });
+      result.push({
+        ...topic,
+        depth,
+        id: topic._id,
+        confidenceCounts: initWithOne(topic.confidence),
+      });
       walk(topic._id, depth + 1);
     }
   }
   walk(null, 0);
+
+  const stack: { depth: number; counts: ConfidenceCounts }[] = [];
+
+  // walkback
+  for (let i = result.length - 1; i >= 0; i--) {
+    const { depth } = result[i];
+    // take all the elements that have a bigger depth currently (or maybe just -1)
+    // to calculate the current thing
+    let total = empty();
+    while (stack.length > 0 && stack[stack.length - 1].depth > depth) {
+      total = add(total, stack.pop()!.counts);
+    }
+    stack.push({ depth, counts: result[i].confidenceCounts });
+    result[i].confidenceCounts = total;
+  }
   return result;
 }
 
@@ -113,3 +133,18 @@ export function getDiff(oldTopics: Topic[], newTopics: Topic[]): Topic[] {
   }
   return diff;
 }
+
+// confidence counts functions
+const empty = (): ConfidenceCounts => ({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
+const add = (a: ConfidenceCounts, b: ConfidenceCounts): ConfidenceCounts => ({
+  1: a[1] + b[1],
+  2: a[2] + b[2],
+  3: a[3] + b[3],
+  4: a[4] + b[4],
+  5: a[5] + b[5],
+});
+export const initWithOne = (a: number): ConfidenceCounts => {
+  let result = empty();
+  result[a as keyof ConfidenceCounts] = 1;
+  return result;
+};

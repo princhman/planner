@@ -80,14 +80,6 @@ export const remove = mutation({
     for (const topic of topics) {
       await ctx.db.delete(topic._id);
     }
-    // Delete related sessions
-    const sessions = await ctx.db
-      .query("studySessions")
-      .withIndex("by_subject", (q) => q.eq("subjectId", args.id))
-      .collect();
-    for (const session of sessions) {
-      await ctx.db.delete(session._id);
-    }
     // Delete the subject
     await ctx.db.delete(args.id);
   },

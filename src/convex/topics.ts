@@ -1,6 +1,11 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel.js";
-import { mutation, query } from "./_generated/server.js";
+import {
+  internalMutation,
+  mutation,
+  MutationCtx,
+  query,
+} from "./_generated/server.js";
 
 // ── Queries ──
 
@@ -40,31 +45,13 @@ export const add = mutation({
       order: order,
       title: args.title,
       parentId: args.parentId,
-      importance: 3,
-      confidence: "not_started",
+      confidence: 1,
       lastRecallAt: undefined,
     });
 
-    return id;
-  },
-});
+    await recomputeAncestorConfidence(ctx, args.parentId);
 
-export const updateRating = mutation({
-  args: {
-    id: v.id("topics"),
-    userId: v.id("users"),
-    confidence: v.optional(v.string()),
-    importance: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const existing = await ctx.db.get(args.id);
-    if (!existing || existing.userId !== args.userId) {
-      throw new Error("Topic not found");
-    }
-    const updates: Record<string, unknown> = { updatedAt: Date.now() };
-    if (args.confidence !== undefined) updates.confidence = args.confidence;
-    if (args.importance !== undefined) updates.importance = args.importance;
-    await ctx.db.patch(args.id, updates);
+    return id;
   },
 });
 
@@ -79,11 +66,20 @@ export const update = mutation({
     ),
   },
   handler: async (ctx, { updates }) => {
+    const affectedParentIds = new Set<Id<"topics">>();
     for (const u of updates) {
+      const oldParentId = (await ctx.db.get(u.id))?.parentId;
       await ctx.db.patch(u.id, {
         parentId: u.parentId,
         order: u.order,
       });
+      if (u.parentId !== oldParentId) {
+        if (u.parentId) affectedParentIds.add(u.parentId);
+        if (oldParentId) affectedParentIds.add(oldParentId);
+      }
+    }
+    for (const parentId of affectedParentIds) {
+      await recomputeAncestorConfidence(ctx, parentId);
     }
   },
 });
@@ -112,3 +108,51 @@ export const updateTitle = mutation({
     await ctx.db.patch(args.id, { title: args.title });
   },
 });
+
+export const updateConfidence = mutation({
+  args: {
+    id: v.id("topics"),
+    confidence: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const topic = await ctx.db.get(args.id);
+    if (topic) {
+      // updating confidence, maybe should enforce the leaf-only updates
+      await ctx.db.patch(args.id, { confidence: args.confidence });
+
+      // recompute for ancestors
+      let parentId = topic.parentId;
+
+      await recomputeAncestorConfidence(ctx, parentId);
+    }
+  },
+});
+
+async function recomputeAncestorConfidence(
+  ctx: MutationCtx,
+  parentId: Id<"topics"> | undefined,
+): Promise<void> {
+  let currentParentId = parentId;
+
+  while (currentParentId) {
+    const parent = await ctx.db.get(currentParentId);
+    if (!parent) break;
+
+    const directChildren = await ctx.db
+      .query("topics")
+      .withIndex("by_parentId", (q) => q.eq("parentId", currentParentId))
+      .collect();
+
+    if (directChildren.length > 0) {
+      const minConfidence = Math.min(
+        ...directChildren.map((child) => child.confidence),
+      );
+
+      if (parent.confidence !== minConfidence) {
+        await ctx.db.patch(currentParentId, { confidence: minConfidence });
+      }
+    }
+
+    currentParentId = parent.parentId;
+  }
+}

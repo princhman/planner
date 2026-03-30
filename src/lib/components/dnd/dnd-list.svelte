@@ -9,7 +9,7 @@
         getDiff,
     } from "./utils";
 
-    import type { Topic } from "./types";
+    import type { ConfidenceCounts, Topic } from "./types";
     import type {
         DragStartEvent,
         DragOverEvent,

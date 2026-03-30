@@ -2,14 +2,22 @@
     import { api } from "$convex/_generated/api";
     import type { Id } from "$convex/_generated/dataModel";
     import { authState } from "$lib/stores/auth-store.svelte";
-    import { useQuery } from "convex-svelte";
+    import { useConvexClient, useQuery } from "convex-svelte";
     import Button from "./ui/button/button.svelte";
     import { Trash2 } from "lucide-svelte";
+
+    const client = useConvexClient();
 
     const userId = $derived(authState.userId);
     const subjects = useQuery(api.subjects.list, () =>
         userId ? { userId } : "skip",
     );
+
+    const deleteSubject = (id: Id<"subjects">) => {
+        if (userId) {
+            client.mutation(api.subjects.remove, { id, userId });
+        }
+    };
 
     const daysUntil = (examDate: string) => {
         const now = new Date();
@@ -37,8 +45,10 @@
                 <Button
                     variant="outline"
                     size="icon"
-                    onclick={() => {
-                        console.log("delete");
+                    onclick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        deleteSubject(subject._id);
                     }}><Trash2 /></Button
                 >
             </div>

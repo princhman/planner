@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Topic } from "./types";
+    import type { ConfidenceCounts, Topic } from "./types";
     import type { Id } from "$convex/_generated/dataModel";
     import { createSortable } from "@dnd-kit/svelte/sortable";
     import Button from "../ui/button/button.svelte";
@@ -9,6 +9,7 @@
     import Input from "../ui/input/input.svelte";
     import { useConvexClient } from "convex-svelte";
     import { api } from "$convex/_generated/api";
+    import ConfidenceSelector from "../confidence-selector.svelte";
 
     const config = {
         alignment: {
@@ -53,16 +54,25 @@
         get index() {
             return index;
         },
-        data: {
-            title: topic.title,
-            order: topic.order,
-            depth: topic.depth,
+        get data() {
+            return {
+                title: topic.title,
+                order: topic.order,
+                depth: topic.depth,
+            };
         },
     });
 
     const updateTitle = () => {
         client.mutation(api.topics.updateTitle, { id: topic.id, title }); // maybe add optimistic updates later?
         editingTitleId = null;
+    };
+
+    const updateConfidence = (value: number) => {
+        client.mutation(api.topics.updateConfidence, {
+            id: topic.id,
+            confidence: value,
+        });
     };
 </script>
 
@@ -125,6 +135,13 @@
             </div>
         </div>
 
-        <div class="absolute right-0 top-1/2 -translate-y-1/2"></div>
+        <div class="absolute right-0 top-1/2 -translate-y-1/2">
+            <ConfidenceSelector
+                value={topic.confidence}
+                onChange={(value: number) => updateConfidence(value)}
+                readOnly={canCollapse}
+                confidenceCounts={topic.confidenceCounts! as ConfidenceCounts}
+            />
+        </div>
     </div>
 </div>
