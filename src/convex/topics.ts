@@ -102,3 +102,13 @@ export const deleteBySubject = mutation({
     }
   },
 });
+
+export const updateTitle = mutation({
+  args: {
+    id: v.id("topics"),
+    title: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { title: args.title });
+  },
+});

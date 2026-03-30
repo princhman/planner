@@ -35,6 +35,7 @@
 
     let oldTopics: Topic[] = [];
     let collapsedIds: Set<Id<"topics">> = $state(new Set<Id<"topics">>());
+    let editingTitleId: Id<"topics"> | null = $state(null);
 
     // getting the preserved state
     if (browser) {
@@ -105,6 +106,9 @@
         event.preventDefault();
 
         if (source && target && source.id !== target.id) {
+            if (collapsedIds.has(target.id as Id<"topics">)) {
+                collapsedIds.delete(target.id as Id<"topics">);
+            }
             const offsetLeft = manager.dragOperation.transform.x;
             const dragDepth = Math.round(offsetLeft / 24); // 24 is hardcoded
             const projectedDepth = initialDepth + dragDepth;
@@ -224,6 +228,7 @@
                         isCollapsed={collapsedIds.has(topic.id)}
                         {toggleCollapse}
                         canCollapse={canCollapse(index)}
+                        bind:editingTitleId
                     />
                 </div>
             {/if}
@@ -235,6 +240,7 @@
                 order={source.data.order!}
                 title={source.data.title!}
                 childrenNumber={descendants.length + 1}
+                depth={source.data.depth!}
             />
         {/snippet}
     </DragOverlay>

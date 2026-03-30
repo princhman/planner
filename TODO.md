@@ -1,3 +1,6 @@
+- [ ] folding topics and preserving a state locally
+- [ ] fix that dragging is possible in the folded or hiddenn items
+
 - [ ] Creating subjects
   - [ ] uploading topics
   - [ ] managing subject
