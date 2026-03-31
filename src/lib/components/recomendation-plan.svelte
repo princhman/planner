@@ -1,31 +1,214 @@
 <script lang="ts">
     import { api } from "$convex/_generated/api";
+    import type { Id } from "$convex/_generated/dataModel";
     import { authState } from "$lib/stores/auth-store.svelte";
+    import { cn } from "$lib/utils";
     import { useQuery } from "convex-svelte";
+    import {
+        confidenceLabels,
+        confidenceBgColors,
+        confidenceTextColors,
+    } from "$lib/confidence";
+    import { Brain, Clock, GraduationCap } from "lucide-svelte";
+    import Switch from "./ui/switch/switch.svelte";
+    import { browser } from "$app/environment";
 
     const userId = $derived(authState.userId);
 
-    const includeNotStarted = $state(true);
+    let includeNotStarted = $state(true);
+    let courseId: Id<"courses"> | undefined = $state(undefined);
+
+    const courses = useQuery(api.courses.list, () =>
+        userId ? { userId } : "skip",
+    );
 
     const recomendations = useQuery(api.topics.recomendations, () =>
-        userId ? { userId, includeNotStarted } : "skip",
+        userId ? { userId, includeNotStarted, courseId, limit: 4 } : "skip",
     );
+
+    if (browser) {
+        try {
+            const rawCourse = localStorage.getItem(
+                "recomendation-plan-filter-courseId",
+            );
+            const parsedCourse = rawCourse
+                ? (JSON.parse(rawCourse) as Id<"courses">)
+                : undefined;
+            courseId = parsedCourse;
+
+            const rawInclude = localStorage.getItem(
+                "recomendation-plan-filter-includeNotStarted",
+            );
+            const parsedInclude = rawInclude
+                ? (JSON.parse(rawInclude) as boolean)
+                : undefined;
+            includeNotStarted = parsedInclude ?? true;
+        } catch {
+            courseId = undefined;
+            includeNotStarted = true;
+        }
+    }
+
+    // preserving a state
+    $effect(() => {
+        localStorage.setItem(
+            "recomendation-plan-filter-courseId",
+            JSON.stringify(courseId),
+        );
+    });
+
+    $effect(() => {
+        localStorage.setItem(
+            "recomendation-plan-filter-includeNotStarted",
+            JSON.stringify(includeNotStarted),
+        );
+    });
+
+    function formatDays(days: number): string {
+        if (days <= 0.05) return "less than 1 hour ago";
+        if (days < 1) return `${Math.round(days * 24)}h ago`;
+        if (days < 30) return `${Math.round(days)}d ago`;
+        return `${Math.round(days / 30)}mo ago`;
+    }
+
+    function formatExamDays(examDate: string | undefined): string | null {
+        if (!examDate) return null;
+        const ms = Date.parse(examDate);
+        if (Number.isNaN(ms)) return null;
+        const days = Math.max(0, Math.ceil((ms - Date.now()) / 86_400_000));
+        if (days === 0) return "today";
+        if (days === 1) return "tomorrow";
+        return `in ${days}d`;
+    }
 </script>
 
-<!-- for now just all, need to add picker for started and course -->
+<div class="flex flex-col gap-2">
+    <div class="flex items-center justify-between">
+        <span class="text-md font-bold">What should i study now?</span>
+        <div class="flex items-center gap-3">
+            <label class="flex items-center gap-1.5 cursor-pointer text-sm">
+                <Switch bind:checked={includeNotStarted} />
+                <span class="text-muted-foreground">Not started</span>
+            </label>
+            <select
+                class="rounded-md border bg-transparent px-2 py-1 text-sm"
+                bind:value={courseId}
+            >
+                <option value={undefined}>All courses</option>
+                {#each courses.data ?? [] as course (course._id)}
+                    <option value={course._id}>{course.name}</option>
+                {/each}
+            </select>
+        </div>
+    </div>
 
-<div>
-    {#if recomendations.data?.length == 0}
-        <p>
-            No recommendations found based on the selected criteria. Consider
-            changing them.
+    {#if recomendations.data?.length === 0}
+        <p class="text-sm text-muted-foreground py-4">
+            No recommendations found. Try changing your filters or add more
+            topics.
         </p>
     {:else}
-        {#each recomendations.data as recomendation}
-            <div>
-                <span>{recomendation.topic.title}</span>
-                <span>{recomendation.priority}</span>
-            </div>
-        {/each}
+        <div class="flex flex-col gap-1.5">
+            {#each recomendations.data ?? [] as rec, i (rec.topic._id)}
+                {@const retrieval = Math.round(rec.r * 100)}
+                {@const conf = rec.topic.confidence}
+                {@const examLabel = formatExamDays(rec.examDate)}
+                <div
+                    class={cn(
+                        "flex flex-col gap-1 rounded-md border px-3 py-2",
+                        i === 0 && "border-primary/40 bg-primary/5",
+                    )}
+                >
+                    <div class="flex items-start justify-between gap-2">
+                        <div
+                            class="flex items-center gap-2 text-xs text-muted-foreground"
+                        >
+                            <span class="text-sm font-medium truncate">
+                                {rec.topic.title}
+                            </span>
+                            <a
+                                href="/courses/{rec.courseId}"
+                                class="rounded bg-muted px-1.5 py-0.5 truncate max-w-32 hover:bg-muted/80"
+                            >
+                                {rec.courseName}
+                            </a>
+                            {#if examLabel}
+                                <span
+                                    class="flex items-center gap-0.5"
+                                    title="Exam {examLabel}"
+                                >
+                                    <GraduationCap class="size-3" />
+                                    {examLabel}
+                                </span>
+                            {/if}
+                        </div>
+                        {#if i === 0}
+                            <span
+                                class="shrink-0 rounded-sm bg-primary/25 border border-primary/40 px-1.5 py-0.5 text-xs font-medium"
+                            >
+                                Start here
+                            </span>
+                        {/if}
+                    </div>
+
+                    <div
+                        class="flex items-center gap-3 text-xs text-muted-foreground"
+                    >
+                        <!-- Confidence -->
+                        <span
+                            class="flex items-center gap-1"
+                            title="Confidence: {confidenceLabels[conf - 1] ??
+                                'Not started'}"
+                        >
+                            <div
+                                class={cn(
+                                    "size-2 rounded-full",
+                                    confidenceBgColors[conf - 1] ??
+                                        confidenceBgColors[0],
+                                )}
+                            ></div>
+                            <span
+                                class={cn(
+                                    confidenceTextColors[conf - 1] ??
+                                        confidenceTextColors[0],
+                                )}
+                            >
+                                {confidenceLabels[conf - 1] ?? "Not started"}
+                            </span>
+                        </span>
+
+                        <!-- Retrievability -->
+                        <span
+                            class="flex items-center gap-1"
+                            title="Memory retention: {retrieval}%"
+                        >
+                            <Brain class="size-3" />
+                            <span
+                                class={cn(
+                                    retrieval > 80
+                                        ? "text-green-400"
+                                        : retrieval > 50
+                                          ? "text-yellow-400"
+                                          : "text-red-400",
+                                )}
+                            >
+                                {retrieval}%
+                            </span>
+                        </span>
+
+                        <!-- Last reviewed -->
+                        <span
+                            class="flex items-center gap-1"
+                            title="Last reviewed"
+                        >
+                            <Clock class="size-3" />
+                            {rec.topic.lastRecallAt
+                                ? formatDays(rec.tDays)
+                                : "never"}
+                        </span>
+                    </div>
+                </div>
+            {/each}
+        </div>
     {/if}
 </div>

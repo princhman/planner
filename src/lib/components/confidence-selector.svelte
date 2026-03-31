@@ -2,6 +2,10 @@
     import { slide } from "svelte/transition";
     import type { ConfidenceCounts, ConfidenceLevel } from "./dnd/types";
     import { cn } from "$lib/utils";
+    import {
+        confidenceLabels,
+        confidenceBgColors,
+    } from "$lib/confidence";
 
     interface Props {
         value: number;
@@ -11,22 +15,6 @@
     }
 
     let { value, onChange, readOnly, confidenceCounts }: Props = $props();
-
-    const confidenceDescriptions = [
-        "Not started",
-        "Recognise it",
-        "Can explain it",
-        "Can do some questions",
-        "Exam ready!",
-    ];
-
-    const confidenceColors = [
-        "bg-gray-500",
-        "bg-red-500",
-        "bg-orange-500",
-        "bg-yellow-500",
-        "bg-green-500",
-    ];
 
     const total = $derived(
         Object.values(confidenceCounts).reduce((a, b) => a + b, 0),
@@ -42,7 +30,7 @@
                         {confidenceCounts[level as keyof ConfidenceCounts]}
                     </span>
                     <div
-                        class={cn(confidenceColors[level - 1], "w-2 h-2")}
+                        class={cn(confidenceBgColors[level - 1], "w-2 h-2")}
                     ></div>
                 {/if}
             {/each}
@@ -51,7 +39,7 @@
             {#each [5, 4, 3, 2, 1] as level (level)}
                 {#if confidenceCounts[level as keyof ConfidenceCounts] > 0}
                     <div
-                        class={confidenceColors[level - 1]}
+                        class={confidenceBgColors[level - 1]}
                         style={`flex: ${confidenceCounts[level as keyof ConfidenceCounts]} 1 0%`}
                         title={`Level ${level}: ${confidenceCounts[level as keyof ConfidenceCounts]}`}
                     ></div>
@@ -66,10 +54,10 @@
                 class={cn(
                     "w-4.5 h-4.5 border",
 
-                    item <= value ? confidenceColors[value - 1] : "bg-gray-400",
+                    item <= value ? confidenceBgColors[value - 1] : "bg-gray-400",
                 )}
                 onclick={() => onChange(item)}
-                aria-label={confidenceDescriptions[i - 1]}
+                aria-label={confidenceLabels[i - 1]}
             ></button>
         {/each}
     </div>

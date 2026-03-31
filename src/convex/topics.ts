@@ -41,7 +41,7 @@ export const recomendations = query({
             .eq("userId", args.userId)
             .eq("courseId", courseId)
             .eq("isLeaf", true)
-            .gte("confidence", args.includeNotStarted ? 0 : 1),
+            .gt("confidence", args.includeNotStarted ? 0 : 1),
         )
         .collect();
     } else {
@@ -51,22 +51,30 @@ export const recomendations = query({
           q
             .eq("userId", args.userId)
             .eq("isLeaf", true)
-            .gte("confidence", args.includeNotStarted ? 0 : 1),
+            .gt("confidence", args.includeNotStarted ? 0 : 1),
         )
         .collect();
     }
 
     // const EU - exam urgency - need to add
     // calculate priority
-    const courseIdExamUrgency = new Map<Id<"courses">, number>();
+    const courseCache = new Map<
+      Id<"courses">,
+      { eu: number; name: string; examDate?: string }
+    >();
     const ranked = await Promise.all(
       topics.map(async (topic) => {
-        if (!courseIdExamUrgency.has(topic.courseId)) {
+        if (!courseCache.has(topic.courseId)) {
           const course = await ctx.db.get(topic.courseId);
+          if (!course) throw new Error(`Course not found: ${topic.courseId}`);
           const eu = computeExamUrgency(course?.examDate, now);
-          courseIdExamUrgency.set(topic.courseId, eu);
+          courseCache.set(topic.courseId, {
+            eu,
+            name: course.name,
+            examDate: course?.examDate,
+          });
         }
-        const eu = courseIdExamUrgency.get(topic.courseId)!;
+        const { eu, name, examDate } = courseCache.get(topic.courseId)!;
         const c = topic.confidence;
         const s = Math.max(topic.stability ?? 1, 0.05); // min 0.05
         const tDays = Math.max(
@@ -76,7 +84,16 @@ export const recomendations = query({
         const r = Math.pow(1 + (19 / 81) * (tDays / s), -0.5);
 
         const priority = (5 - c) * (1 - r) * eu;
-        return { topic, priority, r, eu, tDays };
+        return {
+          topic,
+          priority,
+          r,
+          eu,
+          tDays,
+          courseId: topic.courseId,
+          courseName: name,
+          examDate: examDate,
+        };
       }),
     );
     ranked.sort((a, b) => b.priority - a.priority);

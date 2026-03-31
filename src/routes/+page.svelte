@@ -16,7 +16,7 @@
 {#if isAuthenticated}
     <div class="flex flex-col gap-2">
         <div class="flex justify-between items-center">
-            <span class="text-xl">What should i study now?</span>
+            <span class="text-xl">Quextro Planner</span>
             <div class="flex gap-2">
                 {#if !isAddingCourse}
                     <Button
