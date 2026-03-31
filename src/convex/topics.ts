@@ -58,13 +58,15 @@ export const recomendations = query({
 
     // const EU - exam urgency - need to add
     // calculate priority
+    const courseIdExamUrgency = new Map<Id<"courses">, number>();
     const ranked = await Promise.all(
       topics.map(async (topic) => {
-        const courseExamDate = args.courseId
-          ? (await ctx.db.get(args.courseId))?.examDate
-          : undefined;
-
-        const eu = computeExamUrgency(courseExamDate, now);
+        if (!courseIdExamUrgency.has(topic.courseId)) {
+          const course = await ctx.db.get(topic.courseId);
+          const eu = computeExamUrgency(course?.examDate, now);
+          courseIdExamUrgency.set(topic.courseId, eu);
+        }
+        const eu = courseIdExamUrgency.get(topic.courseId)!;
         const c = topic.confidence;
         const s = Math.max(topic.stability ?? 1, 0.05); // min 0.05
         const tDays = Math.max(
@@ -187,7 +189,7 @@ export const updateConfidence = mutation({
       const t = Math.max(0.05, tMs / 86_400_000);
 
       // calculate r - retriviability (0-1 score of how long since last review, kind of urgency)
-      const r = (1 + ((19 / 81) * t) / s) ^ 0.5;
+      const r = Math.pow(1 + ((19 / 81) * t) / s, -0.5);
 
       // calculate new s (n days to get 100% -> 90% of remembering)
       let newS: number;
@@ -265,6 +267,6 @@ function computeExamUrgency(
   const daysLeft = Math.max(0, (examMs - nowMs) / 86_400_000);
 
   // 90 days -> 1, 0 days -> 2 (simple linear urgency boost)
-  const eu = 1 + Math.max(0, (90 - daysLeft) / 30);
+  const eu = 1 + Math.max(0, (90 - daysLeft) / 90);
   return Math.min(2, Math.max(1, eu));
 }
