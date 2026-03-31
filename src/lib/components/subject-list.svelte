@@ -27,13 +27,14 @@
 </script>
 
 <div class="flex flex-col gap-1">
+    <span class="text-md font-bold">My subjects:</span>
     {#each subjects.data ?? [] as subject}
         <a
             href="/subjects/{subject._id}"
             class="flex items-center justify-between group hover:bg-gray-600 px-2 my-0.5"
         >
-            <div class="flex gap-2 items-center">
-                <p class="font-medium text-xl">{subject.name}</p>
+            <div class="flex gap-1 items-center">
+                <p class="text-md">{subject.name}</p>
                 {#if subject.examDate}
                     <p class="text-sm">in {daysUntil(subject.examDate)} days</p>
                 {/if}
