@@ -24,10 +24,18 @@ export default defineSchema({
     isLeaf: v.boolean(),
     // importance: v.number(), // 1-5 inclusive
     confidence: v.number(), // 1-5 inclusive (meanings are in confidence-selector)
+    stability: v.number(),
     lastRecallAt: v.optional(v.number()),
   })
     .index("by_course", ["courseId"])
     .index("by_user", ["userId"])
     .index("by_parentId", ["parentId"])
+    .index("by_user_leaf_confidence", ["userId", "isLeaf", "confidence"])
+    .index("by_user_course_leaf_confidence", [
+      "userId",
+      "courseId",
+      "isLeaf",
+      "confidence",
+    ])
     .index("by_courses_parentId_order", ["courseId", "parentId", "order"]),
 });

@@ -1,14 +1,16 @@
 <script lang="ts">
-    import CreateSubjectCard from "$lib/components/create-subject-card.svelte";
+    import CreatecourseCard from "$lib/components/create-course-card.svelte";
 
     import LoginCard from "$lib/components/login-card.svelte";
-    import SubjectList from "$lib/components/subject-list.svelte";
+    import CourseList from "$lib/components/course-list.svelte";
+    import RecommendationPlan from "$lib/components/recomendation-plan.svelte";
+
     import Button from "$lib/components/ui/button/button.svelte";
     import { clearAuth, authState } from "$lib/stores/auth-store.svelte";
     import { Check, LogOut, PlusIcon } from "lucide-svelte";
 
     const isAuthenticated = $derived(authState.isAuthenticated);
-    let isAddingSubject = $state(false);
+    let isAddingCourse = $state(false);
 </script>
 
 {#if isAuthenticated}
@@ -16,11 +18,11 @@
         <div class="flex justify-between items-center">
             <span class="text-xl">What should i study now?</span>
             <div class="flex gap-2">
-                {#if !isAddingSubject}
+                {#if !isAddingCourse}
                     <Button
                         variant="ghost"
                         size="icon-sm"
-                        onclick={() => (isAddingSubject = !isAddingSubject)}
+                        onclick={() => (isAddingCourse = !isAddingCourse)}
                         ><PlusIcon /></Button
                     >
                 {/if}
@@ -29,10 +31,11 @@
                 >
             </div>
         </div>
-        {#if isAddingSubject}
-            <CreateSubjectCard onDismiss={() => (isAddingSubject = false)} />
+        {#if isAddingCourse}
+            <CreatecourseCard onDismiss={() => (isAddingCourse = false)} />
         {/if}
-        <SubjectList />
+        <CourseList />
+        <RecommendationPlan />
     </div>
 {:else}
     <span>You need to login</span>
