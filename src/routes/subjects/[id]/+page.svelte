@@ -13,17 +13,17 @@
     let userId = $derived(authState.userId);
     const client = useConvexClient();
     let topicTitle = $state("");
-    const subject = useQuery(api.subjects.get, () =>
-        userId ? { id: params.id as Id<"subjects">, userId } : "skip",
+    const course = useQuery(api.courses.get, () =>
+        userId ? { id: params.id as Id<"courses">, userId } : "skip",
     );
-    const topics = useQuery(api.topics.listBySubject, () =>
-        userId ? { subjectId: params.id as Id<"subjects">, userId } : "skip",
+    const topics = useQuery(api.topics.listByCourse, () =>
+        userId ? { courseId: params.id as Id<"courses">, userId } : "skip",
     );
     const addTopic = () => {
         if (userId) {
             client.mutation(api.topics.add, {
                 userId,
-                subjectId: params.id as Id<"subjects">,
+                courseId: params.id as Id<"courses">,
                 title: topicTitle,
             });
             topicTitle = "";
@@ -43,7 +43,7 @@
             order: t.order,
         }));
         const queryArgs = {
-            subjectId: params.id as Id<"subjects">,
+            courseId: params.id as Id<"courses">,
             userId,
         };
         client.mutation(
@@ -52,7 +52,7 @@
             {
                 optimisticUpdate: (localStore) => {
                     const existing = localStore.getQuery(
-                        api.topics.listBySubject,
+                        api.topics.listByCourse,
                         queryArgs,
                     );
                     if (!existing) return;
@@ -69,7 +69,7 @@
                     });
 
                     localStore.setQuery(
-                        api.topics.listBySubject,
+                        api.topics.listByCourse,
                         queryArgs,
                         next,
                     );
@@ -79,11 +79,11 @@
     };
 </script>
 
-{#if subject}
+{#if course}
     <div class="gap-1 flex">
         <a href="/">Home</a>
         <p>{" > "}</p>
-        <p>{subject.data?.name}</p>
+        <p>{course.data?.name}</p>
     </div>
 {/if}
 <div class="flex">
@@ -103,7 +103,7 @@
         <DndList
             dbTopics={topics.data}
             update={updateTopics}
-            subjectId={params.id}
+            courseId={params.id}
         />
     {:else}
         <p>No topics found.</p>

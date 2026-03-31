@@ -8,18 +8,18 @@ export const list = query({
   handler: async (ctx, args) => {
     if (!args.userId) return [];
     return await ctx.db
-      .query("subjects")
+      .query("courses")
       .withIndex("by_user", (q) => q.eq("userId", args.userId!))
       .collect();
   },
 });
 
 export const get = query({
-  args: { id: v.id("subjects"), userId: v.id("users") },
+  args: { id: v.id("courses"), userId: v.id("users") },
   handler: async (ctx, args) => {
-    const subject = await ctx.db.get(args.id);
-    if (!subject || subject.userId !== args.userId) return null;
-    return subject;
+    const course = await ctx.db.get(args.id);
+    if (!course || course.userId !== args.userId) return null;
+    return course;
   },
 });
 
@@ -33,7 +33,7 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    return await ctx.db.insert("subjects", {
+    return await ctx.db.insert("courses", {
       userId: args.userId,
       name: args.name,
       examDate: args.examDate,
@@ -45,7 +45,7 @@ export const create = mutation({
 
 export const update = mutation({
   args: {
-    id: v.id("subjects"),
+    id: v.id("courses"),
     userId: v.id("users"),
     name: v.optional(v.string()),
     examDate: v.optional(v.string()),
@@ -54,7 +54,7 @@ export const update = mutation({
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.id);
     if (!existing || existing.userId !== args.userId) {
-      throw new Error("Subject not found");
+      throw new Error("course not found");
     }
     const updates: Record<string, unknown> = { updatedAt: Date.now() };
     if (args.name !== undefined) updates.name = args.name;
@@ -66,21 +66,21 @@ export const update = mutation({
 });
 
 export const remove = mutation({
-  args: { id: v.id("subjects"), userId: v.id("users") },
+  args: { id: v.id("courses"), userId: v.id("users") },
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.id);
     if (!existing || existing.userId !== args.userId) {
-      throw new Error("Subject not found");
+      throw new Error("Course not found");
     }
     // Delete related topics
     const topics = await ctx.db
       .query("topics")
-      .withIndex("by_subject", (q) => q.eq("subjectId", args.id))
+      .withIndex("by_course", (q) => q.eq("courseId", args.id))
       .collect();
     for (const topic of topics) {
       await ctx.db.delete(topic._id);
     }
-    // Delete the subject
+    // Delete the course
     await ctx.db.delete(args.id);
   },
 });

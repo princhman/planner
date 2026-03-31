@@ -1,14 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server.js";
 
-/**
- * Simple email/password auth for MVP.
- *
- * NOTE: This is a minimal auth implementation for the MVP.
- * Passwords are hashed using a simple approach.
- * For production, use a proper auth library.
- */
-
 // Simple hash function for MVP (not production-grade)
 function simpleHash(password: string): string {
   let hash = 0;
@@ -27,7 +19,6 @@ export const signUp = mutation({
   handler: async (ctx, args) => {
     const email = args.email.toLowerCase().trim();
 
-    // Check if email already exists
     const existing = await ctx.db
       .query("users")
       .withIndex("by_email", (q) => q.eq("email", email))
@@ -44,7 +35,6 @@ export const signUp = mutation({
     const userId = await ctx.db.insert("users", {
       email,
       passwordHash: simpleHash(args.password),
-      createdAt: Date.now(),
     });
 
     return userId;
@@ -82,6 +72,6 @@ export const getUser = query({
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
     if (!user) return null;
-    return { id: user._id, email: user.email, createdAt: user.createdAt };
+    return { id: user._id, email: user.email };
   },
 });

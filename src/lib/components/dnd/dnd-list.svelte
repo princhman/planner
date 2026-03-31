@@ -25,10 +25,10 @@
     interface Props {
         dbTopics: Doc<"topics">[];
         update: (topics: Topic[]) => void;
-        subjectId: string;
+        courseId: string;
     }
 
-    const { dbTopics, update, subjectId }: Props = $props();
+    const { dbTopics, update, courseId }: Props = $props();
 
     let dragging = $state(false);
     let topics: Topic[] = $state(prepareForRender(dbTopics));
@@ -40,7 +40,7 @@
     // getting the preserved state
     if (browser) {
         try {
-            const raw = localStorage.getItem(subjectId + "-topics");
+            const raw = localStorage.getItem(courseId + "-topics");
             const parsed = raw ? (JSON.parse(raw) as Id<"topics">[]) : [];
             collapsedIds = new Set(parsed);
         } catch {
@@ -51,7 +51,7 @@
     // preserving a state
     $effect(() => {
         localStorage.setItem(
-            subjectId + "-topics",
+            courseId + "-topics",
             JSON.stringify(Array.from(collapsedIds)),
         );
     });

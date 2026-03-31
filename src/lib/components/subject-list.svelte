@@ -9,13 +9,13 @@
     const client = useConvexClient();
 
     const userId = $derived(authState.userId);
-    const subjects = useQuery(api.subjects.list, () =>
+    const courses = useQuery(api.courses.list, () =>
         userId ? { userId } : "skip",
     );
 
-    const deleteSubject = (id: Id<"subjects">) => {
+    const deletecourse = (id: Id<"courses">) => {
         if (userId) {
-            client.mutation(api.subjects.remove, { id, userId });
+            client.mutation(api.courses.remove, { id, userId });
         }
     };
 
@@ -27,16 +27,16 @@
 </script>
 
 <div class="flex flex-col gap-1">
-    <span class="text-md font-bold">My subjects:</span>
-    {#each subjects.data ?? [] as subject}
+    <span class="text-md font-bold">My courses:</span>
+    {#each courses.data ?? [] as course}
         <a
-            href="/subjects/{subject._id}"
+            href="/courses/{course._id}"
             class="flex items-center justify-between group hover:bg-gray-600 px-2 my-0.5"
         >
             <div class="flex gap-1 items-center">
-                <p class="text-md">{subject.name}</p>
-                {#if subject.examDate}
-                    <p class="text-sm">in {daysUntil(subject.examDate)} days</p>
+                <p class="text-md">{course.name}</p>
+                {#if course.examDate}
+                    <p class="text-sm">in {daysUntil(course.examDate)} days</p>
                 {/if}
             </div>
 
@@ -49,7 +49,7 @@
                     onclick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        deleteSubject(subject._id);
+                        deletecourse(course._id);
                     }}><Trash2 /></Button
                 >
             </div>

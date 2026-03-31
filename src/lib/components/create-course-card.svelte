@@ -28,7 +28,7 @@
     async function create() {
         isCreating = true;
         if (userId) {
-            await client.mutation(api.subjects.create, {
+            await client.mutation(api.courses.create, {
                 examDate: date?.toString() ?? "",
                 userId: userId,
                 name,
@@ -43,7 +43,7 @@
 
 <div class="flex items-end justify-between px-4 py-2 border rounded-sm">
     <div class="flex flex-col max-w-96 gap-2">
-        <span class="text-md font-bold">Create subject</span>
+        <span class="text-md font-bold">Create course</span>
         <div class="flex gap-2">
             <Label for="name" class="px-1 ">Name</Label>
             <Input id="name" bind:value={name} type="text" class="font-normal"

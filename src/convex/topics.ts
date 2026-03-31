@@ -9,12 +9,12 @@ import {
 
 // ── Queries ──
 
-export const listBySubject = query({
-  args: { subjectId: v.id("subjects"), userId: v.id("users") },
+export const listByCourse = query({
+  args: { courseId: v.id("courses"), userId: v.id("users") },
   handler: async (ctx, args) => {
     const topics = await ctx.db
       .query("topics")
-      .withIndex("by_subject", (q) => q.eq("subjectId", args.subjectId))
+      .withIndex("by_course", (q) => q.eq("courseId", args.courseId))
       .collect();
     // Verify ownership
     return topics.filter((t) => t.userId === args.userId);
@@ -24,7 +24,7 @@ export const listBySubject = query({
 export const add = mutation({
   args: {
     userId: v.id("users"),
-    subjectId: v.id("subjects"),
+    courseId: v.id("courses"),
     title: v.string(),
     parentId: v.optional(v.id("topics")),
   },
@@ -32,8 +32,8 @@ export const add = mutation({
     // order starts at 1
     const topicWithMaxOrder = await ctx.db
       .query("topics")
-      .withIndex("by_subject_parenId_order", (q) =>
-        q.eq("subjectId", args.subjectId).eq("parentId", args.parentId),
+      .withIndex("by_courses_parentId_order", (q) =>
+        q.eq("courseId", args.courseId).eq("parentId", args.parentId),
       )
       .order("desc")
       .first();
@@ -41,12 +41,13 @@ export const add = mutation({
 
     const id = await ctx.db.insert("topics", {
       userId: args.userId,
-      subjectId: args.subjectId,
+      courseId: args.courseId,
       order: order,
       title: args.title,
       parentId: args.parentId,
       confidence: 1,
       lastRecallAt: undefined,
+      isLeaf: true,
     });
 
     await recomputeAncestorConfidence(ctx, args.parentId);
@@ -80,21 +81,7 @@ export const update = mutation({
     }
     for (const parentId of affectedParentIds) {
       await recomputeAncestorConfidence(ctx, parentId);
-    }
-  },
-});
-
-export const deleteBySubject = mutation({
-  args: { subjectId: v.id("subjects"), userId: v.id("users") },
-  handler: async (ctx, args) => {
-    const topics = await ctx.db
-      .query("topics")
-      .withIndex("by_subject", (q) => q.eq("subjectId", args.subjectId))
-      .collect();
-    for (const topic of topics) {
-      if (topic.userId === args.userId) {
-        await ctx.db.delete(topic._id);
-      }
+      await setIsLeafFromChildren(ctx, parentId);
     }
   },
 });
@@ -155,4 +142,16 @@ async function recomputeAncestorConfidence(
 
     currentParentId = parent.parentId;
   }
+}
+
+async function setIsLeafFromChildren(
+  ctx: MutationCtx,
+  topicId: Id<"topics"> | undefined,
+): Promise<void> {
+  if (!topicId) return;
+  const children = await ctx.db
+    .query("topics")
+    .withIndex("by_parentId", (q) => q.eq("parentId", topicId))
+    .collect();
+  await ctx.db.patch(topicId, { isLeaf: children.length === 0 });
 }
