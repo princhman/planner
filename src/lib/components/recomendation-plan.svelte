@@ -10,9 +10,8 @@
         confidenceTextColors,
     } from "$lib/confidence";
     import { Brain, Clock, GraduationCap } from "lucide-svelte";
-    import Switch from "./ui/switch/switch.svelte";
     import { browser } from "$app/environment";
-
+    import RecomendationSettingsPopover from "./recomendation-settings-popover.svelte";
     const userId = $derived(authState.userId);
 
     let includeNotStarted = $state(true);
@@ -109,25 +108,12 @@
 <div class="flex flex-col gap-2">
     <div class="flex items-center justify-between">
         <span class="text-md font-bold">What should i study now?</span>
-        <div class="flex items-center gap-3">
-            <label class="flex items-center gap-1.5 cursor-pointer text-sm">
-                <Switch bind:checked={applyThresholds} />
-                <span class="text-muted-foreground">Smart</span>
-            </label>
-            <label class="flex items-center gap-1.5 cursor-pointer text-sm">
-                <Switch bind:checked={includeNotStarted} />
-                <span class="text-muted-foreground">Not started</span>
-            </label>
-            <select
-                class="rounded-md border bg-transparent px-2 py-1 text-sm"
-                bind:value={courseId}
-            >
-                <option value={undefined}>All courses</option>
-                {#each courses.data ?? [] as course (course._id)}
-                    <option value={course._id}>{course.name}</option>
-                {/each}
-            </select>
-        </div>
+        <RecomendationSettingsPopover
+            bind:applyThresholds
+            bind:includeNotStarted
+            bind:courseId
+            courses={courses.data ?? []}
+        />
     </div>
 
     {#if recomendations.data?.items.length === 0}
