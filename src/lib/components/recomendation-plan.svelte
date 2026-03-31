@@ -16,6 +16,7 @@
     const userId = $derived(authState.userId);
 
     let includeNotStarted = $state(true);
+    let applyThresholds = $state(true);
     let courseId: Id<"courses"> | undefined = $state(undefined);
 
     const courses = useQuery(api.courses.list, () =>
@@ -23,7 +24,9 @@
     );
 
     const recomendations = useQuery(api.topics.recomendations, () =>
-        userId ? { userId, includeNotStarted, courseId, limit: 4 } : "skip",
+        userId
+            ? { userId, includeNotStarted, courseId, limit: 4, applyThresholds }
+            : "skip",
     );
 
     if (browser) {
@@ -43,6 +46,13 @@
                 ? (JSON.parse(rawInclude) as boolean)
                 : undefined;
             includeNotStarted = parsedInclude ?? true;
+
+            const rawThresholds = localStorage.getItem(
+                "recomendation-plan-filter-applyThresholds",
+            );
+            if (rawThresholds !== null) {
+                applyThresholds = JSON.parse(rawThresholds) as boolean;
+            }
         } catch {
             courseId = undefined;
             includeNotStarted = true;
@@ -64,11 +74,25 @@
         );
     });
 
+    $effect(() => {
+        localStorage.setItem(
+            "recomendation-plan-filter-applyThresholds",
+            JSON.stringify(applyThresholds),
+        );
+    });
+
     function formatDays(days: number): string {
         if (days <= 0.05) return "less than 1 hour ago";
         if (days < 1) return `${Math.round(days * 24)}h ago`;
         if (days < 30) return `${Math.round(days)}d ago`;
         return `${Math.round(days / 30)}mo ago`;
+    }
+
+    function formatMs(ms: number): string {
+        const hours = ms / 3_600_000;
+        if (hours < 1) return `${Math.round(hours * 60)}m`;
+        if (hours < 24) return `${Math.round(hours)}h`;
+        return `${Math.round(hours / 24)}d`;
     }
 
     function formatExamDays(examDate: string | undefined): string | null {
@@ -87,6 +111,10 @@
         <span class="text-md font-bold">What should i study now?</span>
         <div class="flex items-center gap-3">
             <label class="flex items-center gap-1.5 cursor-pointer text-sm">
+                <Switch bind:checked={applyThresholds} />
+                <span class="text-muted-foreground">Smart</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer text-sm">
                 <Switch bind:checked={includeNotStarted} />
                 <span class="text-muted-foreground">Not started</span>
             </label>
@@ -102,14 +130,22 @@
         </div>
     </div>
 
-    {#if recomendations.data?.length === 0}
-        <p class="text-sm text-muted-foreground py-4">
-            No recommendations found. Try changing your filters or add more
-            topics.
-        </p>
+    {#if recomendations.data?.items.length === 0}
+        <div class="flex flex-col items-center gap-1 py-6 text-center">
+            <span class="text-sm font-medium">All caught up!</span>
+            {#if recomendations.data?.nextReviewMs}
+                <p class="text-sm text-muted-foreground">
+                    Next review in ~{formatMs(recomendations.data.nextReviewMs)}
+                </p>
+            {:else}
+                <p class="text-sm text-muted-foreground">
+                    No topics to review right now. Check your filters.
+                </p>
+            {/if}
+        </div>
     {:else}
         <div class="flex flex-col gap-1.5">
-            {#each recomendations.data ?? [] as rec, i (rec.topic._id)}
+            {#each recomendations.data?.items ?? [] as rec, i (rec.topic._id)}
                 {@const retrieval = Math.round(rec.r * 100)}
                 {@const conf = rec.topic.confidence}
                 {@const examLabel = formatExamDays(rec.examDate)}
