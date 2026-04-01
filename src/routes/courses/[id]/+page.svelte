@@ -8,7 +8,11 @@
     import Button from "$lib/components/ui/button/button.svelte";
     import type { Topic } from "$lib/components/dnd/types";
     import DndList from "$lib/components/dnd/dnd-list.svelte";
-    import { FileClock, Pencil, Plus } from "lucide-svelte";
+    import { FileClock, GraduationCap, Pencil, Plus } from "lucide-svelte";
+    import {
+        confidenceLabels,
+        confidenceBgColors,
+    } from "$lib/confidence";
     import * as Breadcrumb from "$lib/components/ui/breadcrumb/index.js";
     import { Label } from "$lib/components/ui/label/index.js";
     import Calendar from "$lib/components/ui/calendar/calendar.svelte";
@@ -59,6 +63,18 @@
     const course = useQuery(api.courses.get, () =>
         userId ? { id: params.id as Id<"courses">, userId } : "skip",
     );
+
+    const examLabel = $derived.by(() => {
+        const raw = course.data?.examDate;
+        if (!raw) return null;
+        const ms = Date.parse(raw);
+        if (Number.isNaN(ms)) return null;
+        const days = Math.ceil((ms - Date.now()) / 86_400_000);
+        if (days < 0) return "passed";
+        if (days === 0) return "today";
+        if (days === 1) return "tomorrow";
+        return `in ${days}d`;
+    });
     const topics = useQuery(api.topics.listByCourse, () =>
         userId ? { courseId: params.id as Id<"courses">, userId } : "skip",
     );
@@ -142,6 +158,15 @@
                     </Breadcrumb.Item>
                 </Breadcrumb.List>
             </Breadcrumb.Root>
+            {#if examLabel}
+                <span
+                    class="flex items-center gap-1 text-xs text-muted-foreground ml-2"
+                    title="Exam {examLabel}"
+                >
+                    <GraduationCap class="size-3.5" />
+                    Exam {examLabel}
+                </span>
+            {/if}
         </div>
         <div class="flex gap-1">
             {#if !isEditMode}
@@ -268,6 +293,16 @@
                 In summaries, a topic that has subtopics is counted using the
                 lowest confidence level of its subtopics.
             </p>
+            <div class="flex flex-wrap gap-x-4 gap-y-1 pt-1">
+                {#each confidenceLabels as label, i}
+                    <span class="flex items-center gap-1.5">
+                        <div
+                            class="{confidenceBgColors[i]} size-2.5 rounded-sm"
+                        ></div>
+                        {label}
+                    </span>
+                {/each}
+            </div>
         </div>
     </details>
     {#if topics.data.length > 0}
