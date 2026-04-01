@@ -10,6 +10,16 @@
     import DndList from "$lib/components/dnd/dnd-list.svelte";
     import { FileClock, Pencil, Plus } from "lucide-svelte";
     import * as Breadcrumb from "$lib/components/ui/breadcrumb/index.js";
+    import { Label } from "$lib/components/ui/label/index.js";
+    import Calendar from "$lib/components/ui/calendar/calendar.svelte";
+    import * as Popover from "$lib/components/ui/popover/index.js";
+    import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+    import {
+        getLocalTimeZone,
+        today,
+        parseDate,
+        type CalendarDate,
+    } from "@internationalized/date";
 
     let { params }: PageProps = $props();
     let userId = $derived(authState.userId);
@@ -19,6 +29,32 @@
     let isBacklogMode = $state(false);
     let isEditMode = $state(false);
     let showAddTopic = $state(false);
+
+    // Course edit state
+    let editName = $state("");
+    let editExamDate = $state<CalendarDate | undefined>(undefined);
+    let datePickerOpen = $state(false);
+    let isSaving = $state(false);
+
+    function initEditFields() {
+        editName = course.data?.name ?? "";
+        const raw = course.data?.examDate;
+        editExamDate = raw ? parseDate(raw) : undefined;
+    }
+
+    async function saveCourse() {
+        if (!userId || !course.data) return;
+        isSaving = true;
+        await client.mutation(api.courses.update, {
+            id: params.id as Id<"courses">,
+            userId,
+            name: editName,
+            examDate: editExamDate?.toString() ?? "",
+        });
+        isSaving = false;
+        isEditMode = false;
+        showAddTopic = false;
+    }
 
     const course = useQuery(api.courses.get, () =>
         userId ? { id: params.id as Id<"courses">, userId } : "skip",
@@ -87,7 +123,7 @@
 </script>
 
 {#if course}
-    <div class="flex justify-between items-center">
+    <div class="flex justify-between items-center pb-2">
         <div class="gap-1 flex">
             <Breadcrumb.Root>
                 <Breadcrumb.List>
@@ -132,11 +168,65 @@
                 variant={isEditMode ? "default" : "outline"}
                 size="icon-sm"
                 onclick={() => {
+                    if (!isEditMode) initEditFields();
                     isEditMode = !isEditMode;
                     if (!isEditMode) showAddTopic = false;
                 }}
             >
                 <Pencil />
+            </Button>
+        </div>
+    </div>
+{/if}
+{#if isEditMode && course.data}
+    <div class="flex items-end justify-between px-4 py-2 border rounded-sm">
+        <div class="flex flex-col max-w-96 gap-2">
+            <span class="text-md font-bold">Edit course</span>
+            <div class="flex gap-2">
+                <Label for="edit-name" class="px-1">Name</Label>
+                <Input
+                    id="edit-name"
+                    bind:value={editName}
+                    type="text"
+                    class="font-normal"
+                />
+            </div>
+            <div class="flex gap-3">
+                <Label for="edit-date" class="px-1">Exam date</Label>
+                <Popover.Root bind:open={datePickerOpen}>
+                    <Popover.Trigger id="edit-date">
+                        <Button
+                            variant="outline"
+                            class="w-full justify-between font-normal"
+                        >
+                            {editExamDate
+                                ? editExamDate
+                                      .toDate(getLocalTimeZone())
+                                      .toLocaleDateString()
+                                : "Select date"}
+                            <ChevronDownIcon />
+                        </Button>
+                    </Popover.Trigger>
+                    <Popover.Content
+                        class="w-auto overflow-hidden p-0"
+                        align="start"
+                    >
+                        <Calendar
+                            type="single"
+                            bind:value={editExamDate}
+                            captionLayout="dropdown"
+                            onValueChange={() => {
+                                datePickerOpen = false;
+                            }}
+                            minValue={today(getLocalTimeZone())}
+                        />
+                    </Popover.Content>
+                </Popover.Root>
+            </div>
+        </div>
+        <div class="flex justify-end gap-2">
+            <Button class="px-4 py-2 font-bold" onclick={saveCourse}
+                >{isSaving ? "Saving..." : "Save"}
             </Button>
         </div>
     </div>
