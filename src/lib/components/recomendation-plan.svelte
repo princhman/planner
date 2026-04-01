@@ -3,16 +3,27 @@
     import type { Id } from "$convex/_generated/dataModel";
     import { authState } from "$lib/stores/auth-store.svelte";
     import { cn } from "$lib/utils";
-    import { useQuery } from "convex-svelte";
+    import { useConvexClient, useQuery } from "convex-svelte";
     import {
         confidenceLabels,
         confidenceBgColors,
         confidenceTextColors,
     } from "$lib/confidence";
-    import { Brain, Clock, GraduationCap } from "lucide-svelte";
+    import { Brain, Check, Clock, GraduationCap } from "lucide-svelte";
     import { browser } from "$app/environment";
     import RecomendationSettingsPopover from "./recomendation-settings-popover.svelte";
+    import MarkDoneResponsive from "./mark-done-responsive.svelte";
+    import Button from "./ui/button/button.svelte";
+    const client = useConvexClient();
     const userId = $derived(authState.userId);
+
+    function markDone(topicId: Id<"topics">, confidence: number) {
+        client.mutation(api.topics.updateConfidence, {
+            id: topicId,
+            confidence,
+            backlogMode: false, // real review — updates lastRecallAt
+        });
+    }
 
     let includeNotStarted = $state(true);
     let applyThresholds = $state(true);
@@ -217,6 +228,24 @@
                             {rec.topic.lastRecallAt
                                 ? formatDays(rec.details.tDays)
                                 : "never"}
+                        </span>
+
+                        <span class="ml-auto">
+                            <MarkDoneResponsive
+                                topicTitle={rec.topic.title}
+                                currentConfidence={conf}
+                                onSelect={(level) =>
+                                    markDone(rec.topic._id, level)}
+                            >
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    class="h-6 px-2 text-xs gap-1"
+                                >
+                                    <Check class="size-3" />
+                                    Mark reviewed
+                                </Button>
+                            </MarkDoneResponsive>
                         </span>
                     </div>
                 </div>
