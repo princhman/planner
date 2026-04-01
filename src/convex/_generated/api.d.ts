@@ -9,10 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
-import type * as import_ from "../import.js";
-import type * as preferences from "../preferences.js";
-import type * as studySessions from "../studySessions.js";
-import type * as subjects from "../subjects.js";
+import type * as courses from "../courses.js";
 import type * as topics from "../topics.js";
 
 import type {
@@ -23,10 +20,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
-  import: typeof import_;
-  preferences: typeof preferences;
-  studySessions: typeof studySessions;
-  subjects: typeof subjects;
+  courses: typeof courses;
   topics: typeof topics;
 }>;
 

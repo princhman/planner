@@ -1,269 +1,352 @@
 import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel.js";
-import { mutation, query } from "./_generated/server.js";
+import type { Doc, Id } from "./_generated/dataModel.js";
+import {
+  internalMutation,
+  mutation,
+  MutationCtx,
+  query,
+} from "./_generated/server.js";
 
-// ── Queries ──
+const initialStabilityToConfidence = [1, 3, 7, 12, 20]; // subject to be updated
+const REVIEW_THRESHOLD = 0.9;
 
-export const listBySubject = query({
-	args: { subjectId: v.id("subjects"), userId: v.id("users") },
-	handler: async (ctx, args) => {
-		const topics = await ctx.db
-			.query("topics")
-			.withIndex("by_subject", (q) => q.eq("subjectId", args.subjectId))
-			.collect();
-		// Verify ownership
-		return topics.filter((t) => t.userId === args.userId);
-	},
+export const listByCourse = query({
+  args: { courseId: v.id("courses"), userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const topics = await ctx.db
+      .query("topics")
+      .withIndex("by_user_course", (q) =>
+        q.eq("userId", args.userId).eq("courseId", args.courseId),
+      )
+      .collect();
+    const now = Date.now();
+    const dayMs = 86_400_000;
+    return topics.map((topic) => {
+      let nextReview: number | null = null;
+      let r: number | null = null;
+      if (topic.isLeaf) {
+        const s = Math.max(topic.stability ?? 1, 0.05);
+        const tDaysUntilThreshold =
+          s * (81 / 19) * (Math.pow(REVIEW_THRESHOLD, -2) - 1);
+        const lastRecallAt = topic.lastRecallAt ?? 0;
+        const reviewAtMs = lastRecallAt + tDaysUntilThreshold * dayMs;
+        nextReview = reviewAtMs - now;
+
+        const tDays = Math.max(0.05, (now - (topic.lastRecallAt ?? 0)) / dayMs);
+        r = Math.pow(1 + (19 / 81) * (tDays / s), -0.5);
+      }
+      return { ...topic, nextReview, r };
+    });
+  },
 });
 
-export const get = query({
-	args: { id: v.id("topics"), userId: v.id("users") },
-	handler: async (ctx, args) => {
-		const topic = await ctx.db.get(args.id);
-		if (!topic || topic.userId !== args.userId) return null;
-		return topic;
-	},
+export const recomendations = query({
+  args: {
+    userId: v.id("users"),
+    includeNotStarted: v.boolean(),
+    courseId: v.optional(v.id("courses")),
+    limit: v.optional(v.number()),
+    applyThresholds: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const courseId = args.courseId;
+    const now = Date.now();
+    const dayMs = 86_400_000;
+    let needsNext = false;
+
+    let topics: Doc<"topics">[];
+    if (courseId) {
+      topics = await ctx.db
+        .query("topics")
+        .withIndex("by_user_course_leaf_confidence", (q) =>
+          q
+            .eq("userId", args.userId)
+            .eq("courseId", courseId)
+            .eq("isLeaf", true)
+            .gt("confidence", args.includeNotStarted ? 0 : 1),
+        )
+        .collect();
+    } else {
+      topics = await ctx.db
+        .query("topics")
+        .withIndex("by_user_leaf_confidence", (q) =>
+          q
+            .eq("userId", args.userId)
+            .eq("isLeaf", true)
+            .gt("confidence", args.includeNotStarted ? 0 : 1),
+        )
+        .collect();
+    }
+
+    const courseCache = new Map<
+      Id<"courses">,
+      { eu: number; name: string; examDate?: string }
+    >();
+
+    const allComputed = await Promise.all(
+      topics.map(async (topic) => {
+        if (!courseCache.has(topic.courseId)) {
+          const course = await ctx.db.get(topic.courseId);
+          if (!course) throw new Error(`Course not found: ${topic.courseId}`);
+          const eu = computeExamUrgency(course?.examDate, now);
+          courseCache.set(topic.courseId, {
+            eu,
+            name: course.name,
+            examDate: course?.examDate,
+          });
+        }
+        const { eu, name, examDate } = courseCache.get(topic.courseId)!;
+        const c = topic.confidence;
+        const s = Math.max(topic.stability ?? 1, 0.05);
+        const tDays = Math.max(0.05, (now - (topic.lastRecallAt ?? 0)) / dayMs);
+        const r = Math.pow(1 + (19 / 81) * (tDays / s), -0.5);
+        const needsReview = r < REVIEW_THRESHOLD;
+        needsNext ||= needsReview;
+
+        const priority = (5 - c) * (1 - r) * eu;
+        return {
+          topic,
+          details: {
+            priority,
+            r,
+            eu,
+            tDays,
+          },
+          courseId: topic.courseId,
+          courseName: name,
+          examDate: examDate,
+          needsReview,
+        };
+      }),
+    );
+
+    // not sure i really need it, maybe remove it later
+    // compute next review time from topics that are currently above threshold
+    // Uses the retrievability formula inverted: solve r = threshold for t
+    // r = (1 + (19/81) * (t/s))^(-0.5) => t = s * (81/19) * (threshold^(-2) - 1)
+    let nextReviewMs: number | null = null;
+    if (args.applyThresholds && !needsNext) {
+      for (const item of allComputed) {
+        if (item.needsReview) continue; // already needs review
+        const s = Math.max(item.topic.stability ?? 1, 0.05);
+        const tDaysUntilThreshold =
+          s * (81 / 19) * (Math.pow(REVIEW_THRESHOLD, -2) - 1);
+        const lastRecallAt = item.topic.lastRecallAt ?? 0;
+        const reviewAtMs = lastRecallAt + tDaysUntilThreshold * dayMs;
+        const msUntil = reviewAtMs - now;
+        if (msUntil > 0 && (nextReviewMs === null || msUntil < nextReviewMs)) {
+          nextReviewMs = msUntil;
+        }
+      }
+    }
+
+    const filtered = args.applyThresholds
+      ? allComputed.filter((item) => item.needsReview)
+      : allComputed;
+
+    filtered.sort((a, b) => b.details.priority - a.details.priority);
+    const limit = Math.max(1, Math.min(args.limit ?? 12, 100));
+
+    return {
+      items: filtered.slice(0, limit),
+      nextReviewMs,
+    };
+  },
 });
 
-export const listByUser = query({
-	args: { userId: v.id("users") },
-	handler: async (ctx, args) => {
-		return await ctx.db
-			.query("topics")
-			.withIndex("by_user", (q) => q.eq("userId", args.userId))
-			.collect();
-	},
-});
+export const add = mutation({
+  args: {
+    userId: v.id("users"),
+    courseId: v.id("courses"),
+    title: v.string(),
+    parentId: v.optional(v.id("topics")),
+  },
+  handler: async (ctx, args) => {
+    // order starts at 1
+    const topicWithMaxOrder = await ctx.db
+      .query("topics")
+      .withIndex("by_courses_parentId_order", (q) =>
+        q.eq("courseId", args.courseId).eq("parentId", args.parentId),
+      )
+      .order("desc")
+      .first();
+    const order = topicWithMaxOrder ? topicWithMaxOrder.order + 1 : 1;
 
-// ── Mutations ──
+    const id = await ctx.db.insert("topics", {
+      userId: args.userId,
+      courseId: args.courseId,
+      order: order,
+      title: args.title,
+      parentId: args.parentId,
+      confidence: 1,
+      lastRecallAt: undefined,
+      stability: initialStabilityToConfidence[0], // need proper stability assigning
+      isLeaf: true,
+    });
 
-export const importBatch = mutation({
-	args: {
-		userId: v.id("users"),
-		subjectId: v.id("subjects"),
-		topics: v.array(
-			v.object({
-				code: v.string(),
-				title: v.string(),
-				depth: v.number(),
-				parentCode: v.optional(v.string()),
-			}),
-		),
-	},
-	handler: async (ctx, args) => {
-		const now = Date.now();
-		const codeToId = new Map<string, string>();
-		const results = [];
+    await recomputeAncestorConfidence(ctx, args.parentId);
 
-		for (const t of args.topics) {
-			const parentTopicId = t.parentCode ? codeToId.get(t.parentCode) : undefined;
-
-			const id = await ctx.db.insert("topics", {
-				userId: args.userId,
-				subjectId: args.subjectId,
-				code: t.code,
-				title: t.title,
-				depth: t.depth,
-				parentTopicId: parentTopicId as any,
-				importance: 3,
-				confidence: "not_started",
-				lastStudiedAt: undefined,
-				lastRecallAt: undefined,
-				createdAt: now,
-				updatedAt: now,
-			});
-
-			codeToId.set(t.code, id);
-			results.push(id);
-		}
-
-		return results;
-	},
-});
-
-export const updateRating = mutation({
-	args: {
-		id: v.id("topics"),
-		userId: v.id("users"),
-		confidence: v.optional(v.string()),
-		importance: v.optional(v.number()),
-	},
-	handler: async (ctx, args) => {
-		const existing = await ctx.db.get(args.id);
-		if (!existing || existing.userId !== args.userId) {
-			throw new Error("Topic not found");
-		}
-		const updates: Record<string, unknown> = { updatedAt: Date.now() };
-		if (args.confidence !== undefined) updates.confidence = args.confidence;
-		if (args.importance !== undefined) updates.importance = args.importance;
-		await ctx.db.patch(args.id, updates);
-	},
+    return id;
+  },
 });
 
 export const update = mutation({
-	args: {
-		id: v.id("topics"),
-		userId: v.id("users"),
-		title: v.optional(v.string()),
-		code: v.optional(v.string()),
-	},
-	handler: async (ctx, args) => {
-		const existing = await ctx.db.get(args.id);
-		if (!existing || existing.userId !== args.userId) {
-			throw new Error("Topic not found");
-		}
-
-		const updates: Record<string, unknown> = { updatedAt: Date.now() };
-		if (args.title !== undefined) updates.title = args.title;
-		if (args.code !== undefined) updates.code = args.code;
-		await ctx.db.patch(args.id, updates);
-	},
+  args: {
+    updates: v.array(
+      v.object({
+        id: v.id("topics"),
+        parentId: v.optional(v.id("topics")),
+        order: v.number(),
+      }),
+    ),
+  },
+  handler: async (ctx, { updates }) => {
+    const affectedParentIds = new Set<Id<"topics">>();
+    for (const u of updates) {
+      const oldParentId = (await ctx.db.get(u.id))?.parentId;
+      await ctx.db.patch(u.id, {
+        parentId: u.parentId,
+        order: u.order,
+      });
+      if (u.parentId !== oldParentId) {
+        if (u.parentId) affectedParentIds.add(u.parentId);
+        if (oldParentId) affectedParentIds.add(oldParentId);
+      }
+    }
+    for (const parentId of affectedParentIds) {
+      await recomputeAncestorConfidence(ctx, parentId);
+      await setIsLeafFromChildren(ctx, parentId);
+    }
+  },
 });
 
-export const reorganize = mutation({
-	args: {
-		userId: v.id("users"),
-		subjectId: v.id("subjects"),
-		topics: v.array(
-			v.object({
-				id: v.id("topics"),
-				code: v.string(),
-				depth: v.number(),
-				parentTopicId: v.optional(v.id("topics")),
-			}),
-		),
-	},
-	handler: async (ctx, args) => {
-		const now = Date.now();
-
-		for (const topic of args.topics) {
-			const existing = await ctx.db.get(topic.id);
-			if (
-				!existing ||
-				existing.userId !== args.userId ||
-				existing.subjectId !== args.subjectId
-			) {
-				throw new Error("Topic not found");
-			}
-		}
-
-		for (const topic of args.topics) {
-			await ctx.db.patch(topic.id, {
-				code: topic.code,
-				depth: topic.depth,
-				parentTopicId: topic.parentTopicId,
-				updatedAt: now,
-			});
-		}
-	},
+export const updateTitle = mutation({
+  args: {
+    id: v.id("topics"),
+    title: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { title: args.title });
+  },
 });
 
-export const deleteBySubject = mutation({
-	args: { subjectId: v.id("subjects"), userId: v.id("users") },
-	handler: async (ctx, args) => {
-		const topics = await ctx.db
-			.query("topics")
-			.withIndex("by_subject", (q) => q.eq("subjectId", args.subjectId))
-			.collect();
-		for (const topic of topics) {
-			if (topic.userId === args.userId) {
-				await ctx.db.delete(topic._id);
-			}
-		}
-	},
+export const updateConfidence = mutation({
+  args: {
+    id: v.id("topics"),
+    confidence: v.number(),
+    backlogMode: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const topic = await ctx.db.get(args.id);
+    if (topic) {
+      // if backlogMode -> confidence update, stability reset, lastRecall is the same
+      if (args.backlogMode) {
+        await ctx.db.patch(args.id, {
+          confidence: args.confidence,
+          stability: initialStabilityToConfidence[args.confidence - 1],
+        });
+      } else {
+        // maybe should enforce the leaf-only updates
+        // if confidence was not started assign initial s
+        // algorithm that was improved by AI, but i understand it
+        // some constants that can be improved
+        // WU - went up, SS - stayed the same, WD - wend down
+        const WU_CONF = 0.35; // how much conf delta impacts new s
+        const WU_R = 2; // how much good review time impacts new s
+        const SS_R = 1.3; // how much good review impacts
+        const SS_C = 1.15; // constant in staty the same
+        const WD_C = 1.1; // constant to decrease
+        const WD_R = 0.4; // how much review impacts
+
+        const s = topic.stability;
+        const confDelta = args.confidence - topic.confidence;
+
+        // calculate t since last review
+        const now = Date.now();
+        const lastRecallAt = topic.lastRecallAt ?? 0;
+        const tMs = Math.max(0, now - lastRecallAt);
+        const t = Math.max(0.05, tMs / 86_400_000);
+
+        // calculate r - retriviability (0-1 score of how long since last review, kind of urgency)
+        const r = Math.pow(1 + ((19 / 81) * t) / s, -0.5);
+
+        // calculate new s (n days to get 100% -> 90% of remembering)
+        let newS: number;
+        if (confDelta > 0) {
+          newS = s * (1 + WU_CONF * confDelta) * (1 + WU_R * (1 - r)); // reward good time review and good delta
+        } else if (confDelta == 0) {
+          newS = s * (SS_C + SS_R * (1 - r)); // increase a bit, depending on when it was reviewed
+        } else {
+          newS = s * (WD_C + WD_R * r); // reducing s for next time
+        }
+
+        await ctx.db.patch(args.id, {
+          confidence: args.confidence,
+          lastRecallAt: now,
+          stability: newS,
+        });
+
+        // recompute for ancestors
+        await recomputeAncestorConfidence(ctx, topic.parentId);
+      }
+    }
+  },
 });
 
-export const remove = mutation({
-	args: { id: v.id("topics"), userId: v.id("users") },
-	handler: async (ctx, args) => {
-		const existing = await ctx.db.get(args.id);
-		if (!existing || existing.userId !== args.userId) {
-			throw new Error("Topic not found");
-		}
+// helpers
+async function recomputeAncestorConfidence(
+  ctx: MutationCtx,
+  parentId: Id<"topics"> | undefined,
+): Promise<void> {
+  let currentParentId = parentId;
 
-		const subjectTopics = await ctx.db
-			.query("topics")
-			.withIndex("by_subject", (q) => q.eq("subjectId", existing.subjectId))
-			.collect();
+  while (currentParentId) {
+    const parent = await ctx.db.get(currentParentId);
+    if (!parent) break;
 
-		const idsToDelete = new Set<string>([args.id]);
-		let changed = true;
+    const directChildren = await ctx.db
+      .query("topics")
+      .withIndex("by_parentId", (q) => q.eq("parentId", currentParentId))
+      .collect();
 
-		while (changed) {
-			changed = false;
-			for (const topic of subjectTopics) {
-				if (
-					topic.userId === args.userId &&
-					topic.parentTopicId &&
-					idsToDelete.has(topic.parentTopicId) &&
-					!idsToDelete.has(topic._id)
-				) {
-					idsToDelete.add(topic._id);
-					changed = true;
-				}
-			}
-		}
+    if (directChildren.length > 0) {
+      const minConfidence = Math.min(
+        ...directChildren.map((child) => child.confidence),
+      );
 
-		for (const topicId of idsToDelete) {
-			await ctx.db.delete(topicId as never);
-		}
+      if (parent.confidence !== minConfidence) {
+        await ctx.db.patch(currentParentId, { confidence: minConfidence });
+      }
+    }
 
-		const now = Date.now();
-		const remainingTopics = subjectTopics
-			.filter((topic) => topic.userId === args.userId && !idsToDelete.has(topic._id))
-			.sort(compareTopicDocsByCode);
-		const updates = buildRenumberedTopicUpdates(remainingTopics);
-
-		for (const update of updates) {
-			await ctx.db.patch(update.id, {
-				code: update.code,
-				updatedAt: now,
-			});
-		}
-	},
-});
-
-function buildRenumberedTopicUpdates(
-	topics: Array<{
-		_id: Id<"topics">;
-		code: string;
-		parentTopicId?: Id<"topics">;
-	}>,
-): Array<{ id: Id<"topics">; code: string }> {
-	const siblingCounter = new Map<string, number>();
-	const codes = new Map<Id<"topics">, string>();
-
-	return topics.map((topic) => {
-		const key = topic.parentTopicId ?? "__root__";
-		const count = (siblingCounter.get(key) ?? 0) + 1;
-		siblingCounter.set(key, count);
-
-		const parentCode = topic.parentTopicId
-			? (codes.get(topic.parentTopicId) ?? "")
-			: "";
-		const code = parentCode ? `${parentCode}.${count}` : `${count}`;
-		codes.set(topic._id, code);
-
-		return { id: topic._id, code };
-	});
+    currentParentId = parent.parentId;
+  }
 }
 
-function compareTopicDocsByCode(
-	a: { code: string },
-	b: { code: string },
+async function setIsLeafFromChildren(
+  ctx: MutationCtx,
+  topicId: Id<"topics"> | undefined,
+): Promise<void> {
+  if (!topicId) return;
+  const children = await ctx.db
+    .query("topics")
+    .withIndex("by_parentId", (q) => q.eq("parentId", topicId))
+    .collect();
+  await ctx.db.patch(topicId, { isLeaf: children.length === 0 });
+}
+
+function computeExamUrgency(
+  examDate: string | undefined,
+  nowMs: number,
 ): number {
-	const aParts = a.code.split(".").map((part) => Number(part));
-	const bParts = b.code.split(".").map((part) => Number(part));
-	const maxLength = Math.max(aParts.length, bParts.length);
+  if (!examDate) return 1;
 
-	for (let i = 0; i < maxLength; i++) {
-		const aPart = aParts[i];
-		const bPart = bParts[i];
+  const examMs = Date.parse(examDate);
+  if (Number.isNaN(examMs)) return 1;
 
-		if (aPart === undefined) return -1;
-		if (bPart === undefined) return 1;
-		if (aPart !== bPart) return aPart - bPart;
-	}
+  const daysLeft = Math.max(0, (examMs - nowMs) / 86_400_000);
 
-	return 0;
+  // 90 days -> 1, 0 days -> 2 (simple linear urgency boost)
+  const eu = 1 + Math.max(0, (90 - daysLeft) / 90);
+  return Math.min(2, Math.max(1, eu));
 }
