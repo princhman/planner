@@ -245,6 +245,7 @@ export const updateConfidence = mutation({
           confidence: args.confidence,
           stability: initialStabilityToConfidence[args.confidence - 1],
         });
+        await recomputeAncestorConfidence(ctx, topic.parentId);
       } else {
         // maybe should enforce the leaf-only updates
         // if confidence was not started assign initial s
