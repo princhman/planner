@@ -16,6 +16,8 @@
     const client = useConvexClient();
     let topicTitle = $state("");
     let isBacklogMode = $state(false);
+    let isEditMode = $state(false);
+    let showAddTopic = $state(false);
 
     const course = useQuery(api.courses.get, () =>
         userId ? { id: params.id as Id<"courses">, userId } : "skip",
@@ -91,35 +93,54 @@
             <p>{course.data?.name}</p>
         </div>
         <div class="flex gap-1">
+            {#if !isEditMode}
+                <Button
+                    onclick={() => {
+                        isBacklogMode = !isBacklogMode;
+                    }}
+                    variant="outline"
+                    size="sm"
+                    ><FileClock /><span
+                        >{isBacklogMode
+                            ? "Disable backlog"
+                            : "Enable backlog"}</span
+                    ></Button
+                >
+            {/if}
+            {#if isEditMode}
+                <Button
+                    variant={showAddTopic ? "default" : "outline"}
+                    size="icon-sm"
+                    onclick={() => {
+                        showAddTopic = !showAddTopic;
+                    }}
+                >
+                    <Plus />
+                </Button>
+            {/if}
             <Button
+                variant={isEditMode ? "default" : "outline"}
+                size="icon-sm"
                 onclick={() => {
-                    isBacklogMode = !isBacklogMode;
+                    isEditMode = !isEditMode;
+                    if (!isEditMode) showAddTopic = false;
                 }}
-                variant="outline"
-                size="sm"
-                ><FileClock /><span
-                    >{isBacklogMode
-                        ? "Disable backlog"
-                        : "Enable backlog"}</span
-                ></Button
             >
-            <Button variant="outline" size="icon-sm" onclick={() => {}}>
-                <Plus />
-            </Button>
-            <Button variant="outline" size="icon-sm" onclick={() => {}}>
                 <Pencil />
             </Button>
         </div>
     </div>
 {/if}
-<div class="flex">
-    <Input
-        bind:value={topicTitle}
-        onkeydown={(e) =>
-            e.key === "Enter" && topicTitle.trim() !== "" && addTopic()}
-    />
-    <Button disabled={!topicTitle.trim()} onclick={addTopic}>Add</Button>
-</div>
+{#if showAddTopic}
+    <div class="flex">
+        <Input
+            bind:value={topicTitle}
+            onkeydown={(e) =>
+                e.key === "Enter" && topicTitle.trim() !== "" && addTopic()}
+        />
+        <Button disabled={!topicTitle.trim()} onclick={addTopic}>Add</Button>
+    </div>
+{/if}
 {#if topics.data}
     <p class="text-gray-500">
         In summaries, a topic that has subtopics is counted using the lowest
@@ -131,6 +152,7 @@
             update={updateTopics}
             courseId={params.id}
             {isBacklogMode}
+            {isEditMode}
         />
     {:else}
         <p>No topics found.</p>

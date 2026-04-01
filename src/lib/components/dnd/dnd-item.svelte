@@ -5,7 +5,7 @@
     import Button from "../ui/button/button.svelte";
     import ChevronRight from "@lucide/svelte/icons/chevron-right";
     import ChevronDown from "@lucide/svelte/icons/chevron-down";
-    import { Check, Pencil } from "lucide-svelte";
+    import { Check, GripVertical, Pencil } from "lucide-svelte";
     import Input from "../ui/input/input.svelte";
     import { useConvexClient } from "convex-svelte";
     import { api } from "$convex/_generated/api";
@@ -29,6 +29,7 @@
         canCollapse: boolean;
         editingTitleId: Id<"topics"> | null;
         isBacklogMode: boolean;
+        isEditMode: boolean;
     }
     let {
         topic,
@@ -38,6 +39,7 @@
         canCollapse,
         editingTitleId = $bindable(),
         isBacklogMode,
+        isEditMode,
     }: Props = $props();
 
     const client = useConvexClient();
@@ -55,6 +57,9 @@
         },
         get index() {
             return index;
+        },
+        get disabled() {
+            return !isEditMode;
         },
         get data() {
             return {
@@ -82,9 +87,9 @@
 <div {@attach sortable.attach} class="group relative w-full flex box-border">
     <div class="flex w-full items-center">
         <div
-            class="flex flex-1 w-full items-center max-w-md {sortable.isDragSource
+            class="flex flex-1 w-full items-center {sortable.isDragSource
                 ? 'bg-gray-700'
-                : ''}"
+                : 'max-w-md'}"
             style:margin-left="{topic.depth * 24}px"
         >
             <div class="w-5 h-5 items-center shrink-0">
@@ -117,34 +122,42 @@
                         {topic.title}</span
                     >
                 {/if}
-                <Button
-                    size="icon-xs"
-                    variant="ghost"
-                    disabled={anotherIsEdting}
-                    class="w-5 h-5 p-0 {isEdit
-                        ? 'visible'
-                        : 'lg:invisible'} {!isEdit
-                        ? 'lg:group-hover:visible'
-                        : ''}"
-                    onclick={() =>
-                        isEdit ? updateTitle() : (editingTitleId = topic.id)}
-                >
-                    {#if !isEdit}
-                        <Pencil />
-                    {:else}
-                        <Check />
-                    {/if}
-                </Button>
+                {#if isEditMode}
+                    <Button
+                        size="icon-xs"
+                        variant="ghost"
+                        disabled={anotherIsEdting}
+                        class="w-5 h-5 p-0 {isEdit
+                            ? 'visible'
+                            : 'lg:invisible'} {!isEdit
+                            ? 'lg:group-hover:visible'
+                            : ''}"
+                        onclick={() =>
+                            isEdit
+                                ? updateTitle()
+                                : (editingTitleId = topic.id)}
+                    >
+                        {#if !isEdit}
+                            <Pencil />
+                        {:else}
+                            <Check />
+                        {/if}
+                    </Button>
+                {/if}
             </div>
         </div>
 
         <div class="absolute right-0 top-1/2 -translate-y-1/2">
-            <ConfidenceSelector
-                value={topic.confidence}
-                onChange={(value: number) => updateConfidence(value)}
-                readOnly={canCollapse}
-                confidenceCounts={topic.confidenceCounts! as ConfidenceCounts}
-            />
+            {#if isEditMode}
+                <GripVertical class="text-muted-foreground cursor-grab" />
+            {:else}
+                <ConfidenceSelector
+                    value={topic.confidence}
+                    onChange={(value: number) => updateConfidence(value)}
+                    readOnly={canCollapse}
+                    confidenceCounts={topic.confidenceCounts! as ConfidenceCounts}
+                />
+            {/if}
         </div>
     </div>
 </div>
