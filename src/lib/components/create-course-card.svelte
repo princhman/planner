@@ -14,8 +14,6 @@
     import { useConvexClient } from "convex-svelte";
     import { api } from "$convex/_generated/api";
 
-    const { onDismiss }: { onDismiss: () => void } = $props();
-
     let date = $state<CalendarDate | undefined>();
     let name = $state<string>("");
     let isCreating = $state<boolean>(false);
@@ -83,7 +81,6 @@
         </div>
     </div>
     <div class="flex justify-end gap-2">
-        <Button variant="ghost" onclick={onDismiss}>Cancel</Button>
         <Button class="px-4 py-2 font-bold" onclick={create}
             >{isCreating ? "Creating..." : "Create"}
         </Button>

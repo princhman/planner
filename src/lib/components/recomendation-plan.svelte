@@ -108,12 +108,21 @@
 <div class="flex flex-col gap-2">
     <div class="flex items-center justify-between">
         <span class="text-md font-bold">What should i study now?</span>
-        <RecomendationSettingsPopover
-            bind:applyThresholds
-            bind:includeNotStarted
-            bind:courseId
-            courses={courses.data ?? []}
-        />
+        <div class="flex gap-2">
+            <select
+                class="rounded-md border bg-transparent px-2 py-1 text-sm"
+                bind:value={courseId}
+            >
+                <option value={undefined}>All courses</option>
+                {#each courses.data as course (course._id)}
+                    <option value={course._id}>{course.name}</option>
+                {/each}
+            </select>
+            <RecomendationSettingsPopover
+                bind:applyThresholds
+                bind:includeNotStarted
+            />
+        </div>
     </div>
 
     {#if recomendations.data?.items.length === 0}
@@ -196,25 +205,6 @@
                                 )}
                             >
                                 {confidenceLabels[conf - 1] ?? "Not started"}
-                            </span>
-                        </span>
-
-                        <!-- Retrievability -->
-                        <span
-                            class="flex items-center gap-1"
-                            title="Memory retention: {retrieval}%"
-                        >
-                            <Brain class="size-3" />
-                            <span
-                                class={cn(
-                                    retrieval > 80
-                                        ? "text-green-400"
-                                        : retrieval > 50
-                                          ? "text-yellow-400"
-                                          : "text-red-400",
-                                )}
-                            >
-                                {retrieval}%
                             </span>
                         </span>
 

@@ -9,6 +9,7 @@
     import type { Topic } from "$lib/components/dnd/types";
     import DndList from "$lib/components/dnd/dnd-list.svelte";
     import { FileClock, Pencil, Plus } from "lucide-svelte";
+    import * as Breadcrumb from "$lib/components/ui/breadcrumb/index.js";
 
     let { params }: PageProps = $props();
     let userId = $derived(authState.userId);
@@ -88,9 +89,23 @@
 {#if course}
     <div class="flex justify-between items-center">
         <div class="gap-1 flex">
-            <a href="/">Home</a>
-            <p>{" > "}</p>
-            <p>{course.data?.name}</p>
+            <Breadcrumb.Root>
+                <Breadcrumb.List>
+                    <Breadcrumb.Item>
+                        <Breadcrumb.Link href="/">Home</Breadcrumb.Link>
+                    </Breadcrumb.Item>
+                    <Breadcrumb.Separator />
+                    <Breadcrumb.Item>
+                        <Breadcrumb.Page
+                            >{course.data?.name}{isBacklogMode
+                                ? " (backloging)"
+                                : isEditMode
+                                  ? " (editing)"
+                                  : ""}</Breadcrumb.Page
+                        >
+                    </Breadcrumb.Item>
+                </Breadcrumb.List>
+            </Breadcrumb.Root>
         </div>
         <div class="flex gap-1">
             {#if !isEditMode}
@@ -98,13 +113,8 @@
                     onclick={() => {
                         isBacklogMode = !isBacklogMode;
                     }}
-                    variant="outline"
-                    size="sm"
-                    ><FileClock /><span
-                        >{isBacklogMode
-                            ? "Disable backlog"
-                            : "Enable backlog"}</span
-                    ></Button
+                    variant={isBacklogMode ? "default" : "outline"}
+                    size="sm"><FileClock /><span>Backlog mode</span></Button
                 >
             {/if}
             {#if isEditMode}
@@ -142,23 +152,34 @@
     </div>
 {/if}
 {#if topics.data}
-    {#if isBacklogMode}
-        <p class="text-gray-500">
-            Backlog mode: In this mode, you do not update last recall date, only
-            the confidence and your understanding stability (how long it takes
-            for your understanding to go from 100% to 90%).
-        </p>
-    {:else}
-        <p class="text-gray-500">
-            Any confidence udpate would be considered to be a review, last
-            recall date would be set to today. To just update confidence, use
-            backlog mode.
-        </p>
-    {/if}
-    <p class="text-gray-500">
-        In summaries, a topic that has subtopics is counted using the lowest
-        confidence level of its subtopics.
-    </p>
+    <details
+        class="text-sm text-muted-foreground [&>summary]:cursor-pointer [&>summary]:select-none"
+    >
+        <summary
+            class="text-sm font-medium hover:text-foreground transition-colors w-fit"
+            >How does this work?</summary
+        >
+        <div class="mt-1.5 space-y-1 text-sm">
+            {#if isBacklogMode}
+                <p>
+                    Backlog mode: In this mode, you do not update last recall
+                    date, only the confidence and your understanding stability
+                    (how long it takes for your understanding to go from 100% to
+                    90%).
+                </p>
+            {:else}
+                <p>
+                    Any confidence update would be considered to be a review,
+                    last recall date would be set to today. To just update
+                    confidence, use backlog mode.
+                </p>
+            {/if}
+            <p>
+                In summaries, a topic that has subtopics is counted using the
+                lowest confidence level of its subtopics.
+            </p>
+        </div>
+    </details>
     {#if topics.data.length > 0}
         <DndList
             dbTopics={topics.data}

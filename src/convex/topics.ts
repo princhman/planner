@@ -28,14 +28,11 @@ export const listByCourse = query({
         const s = Math.max(topic.stability ?? 1, 0.05);
         const tDaysUntilThreshold =
           s * (81 / 19) * (Math.pow(REVIEW_THRESHOLD, -2) - 1);
-        const lastRecallAt = topic.lastRecallAt ?? now;
+        const lastRecallAt = topic.lastRecallAt ?? 0;
         const reviewAtMs = lastRecallAt + tDaysUntilThreshold * dayMs;
         nextReview = reviewAtMs - now;
 
-        const tDays = Math.max(
-          0.05,
-          (now - (topic.lastRecallAt ?? now)) / dayMs,
-        );
+        const tDays = Math.max(0.05, (now - (topic.lastRecallAt ?? 0)) / dayMs);
         r = Math.pow(1 + (19 / 81) * (tDays / s), -0.5);
       }
       return { ...topic, nextReview, r };
@@ -101,10 +98,7 @@ export const recomendations = query({
         const { eu, name, examDate } = courseCache.get(topic.courseId)!;
         const c = topic.confidence;
         const s = Math.max(topic.stability ?? 1, 0.05);
-        const tDays = Math.max(
-          0.05,
-          (now - (topic.lastRecallAt ?? now)) / dayMs,
-        );
+        const tDays = Math.max(0.05, (now - (topic.lastRecallAt ?? 0)) / dayMs);
         const r = Math.pow(1 + (19 / 81) * (tDays / s), -0.5);
         const needsReview = r < REVIEW_THRESHOLD;
         needsNext ||= needsReview;
@@ -137,7 +131,7 @@ export const recomendations = query({
         const s = Math.max(item.topic.stability ?? 1, 0.05);
         const tDaysUntilThreshold =
           s * (81 / 19) * (Math.pow(REVIEW_THRESHOLD, -2) - 1);
-        const lastRecallAt = item.topic.lastRecallAt ?? now;
+        const lastRecallAt = item.topic.lastRecallAt ?? 0;
         const reviewAtMs = lastRecallAt + tDaysUntilThreshold * dayMs;
         const msUntil = reviewAtMs - now;
         if (msUntil > 0 && (nextReviewMs === null || msUntil < nextReviewMs)) {
@@ -257,19 +251,19 @@ export const updateConfidence = mutation({
         // algorithm that was improved by AI, but i understand it
         // some constants that can be improved
         // WU - went up, SS - stayed the same, WD - wend down
-        const WU_CONF = 0.4; // how much conf delta impacts new s
-        const WU_R = 1.5; // how much good review time impacts new s
-        const SS_R = 0.5; // how much good review impacts
+        const WU_CONF = 0.35; // how much conf delta impacts new s
+        const WU_R = 2; // how much good review time impacts new s
+        const SS_R = 1.3; // how much good review impacts
         const SS_C = 1.15; // constant in staty the same
-        const WD_C = 0.35; // constant to decrease
-        const WD_R = 0.25; // how much review impacts
+        const WD_C = 1.1; // constant to decrease
+        const WD_R = 0.4; // how much review impacts
 
         const s = topic.stability;
         const confDelta = args.confidence - topic.confidence;
 
         // calculate t since last review
         const now = Date.now();
-        const lastRecallAt = topic.lastRecallAt ?? now;
+        const lastRecallAt = topic.lastRecallAt ?? 0;
         const tMs = Math.max(0, now - lastRecallAt);
         const t = Math.max(0.05, tMs / 86_400_000);
 

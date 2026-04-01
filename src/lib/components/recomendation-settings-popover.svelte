@@ -8,15 +8,11 @@
     interface Props {
         applyThresholds: boolean;
         includeNotStarted: boolean;
-        courseId: Id<"courses"> | undefined;
-        courses: Doc<"courses">[];
     }
 
     let {
         applyThresholds = $bindable(),
         includeNotStarted = $bindable(),
-        courseId = $bindable(),
-        courses,
     }: Props = $props();
 </script>
 
@@ -38,18 +34,6 @@
             <div class="flex items-center justify-between">
                 <span>Include not started</span>
                 <Switch bind:checked={includeNotStarted} />
-            </div>
-            <div class="flex flex-col gap-1">
-                <span>Course</span>
-                <select
-                    class="rounded-md border bg-transparent px-2 py-1 text-sm"
-                    bind:value={courseId}
-                >
-                    <option value={undefined}>All courses</option>
-                    {#each courses as course (course._id)}
-                        <option value={course._id}>{course.name}</option>
-                    {/each}
-                </select>
             </div>
         </div>
     </Popover.Content>

@@ -18,21 +18,19 @@
         <div class="flex justify-between items-center">
             <span class="text-xl">Quextro Planner</span>
             <div class="flex gap-2">
-                {#if !isAddingCourse}
-                    <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onclick={() => (isAddingCourse = !isAddingCourse)}
-                        ><PlusIcon /></Button
-                    >
-                {/if}
-                <Button variant="ghost" size="icon-sm" onclick={clearAuth}
+                <Button
+                    variant={isAddingCourse ? "default" : "outline"}
+                    size="icon-sm"
+                    onclick={() => (isAddingCourse = !isAddingCourse)}
+                    ><PlusIcon /></Button
+                >
+                <Button variant="outline" size="icon-sm" onclick={clearAuth}
                     ><LogOut /></Button
                 >
             </div>
         </div>
         {#if isAddingCourse}
-            <CreatecourseCard onDismiss={() => (isAddingCourse = false)} />
+            <CreatecourseCard />
         {/if}
         <CourseList />
         <RecommendationPlan />
