@@ -16,7 +16,7 @@
 {#if isAuthenticated}
     <div class="flex flex-col gap-2">
         <div class="flex justify-between items-center">
-            <span class="text-xl">Quextro Planner</span>
+            <span class="text-xl">Planner</span>
             <div class="flex gap-2">
                 <Button
                     variant={isAddingCourse ? "default" : "outline"}

@@ -43,7 +43,7 @@
     <input bind:value={email} class="p-2" placeholder="Type your email" />
     <input
         bind:value={password}
-        class="p-3"
+        class="p-2"
         placeholder="Type your password"
         type="password"
     />
