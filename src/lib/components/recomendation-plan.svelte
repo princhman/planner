@@ -132,7 +132,7 @@
     {:else}
         <div class="flex flex-col gap-1.5">
             {#each recomendations.data?.items ?? [] as rec, i (rec.topic._id)}
-                {@const retrieval = Math.round(rec.r * 100)}
+                {@const retrieval = Math.round(rec.details.r * 100)}
                 {@const conf = rec.topic.confidence}
                 {@const examLabel = formatExamDays(rec.examDate)}
                 <div
@@ -225,7 +225,7 @@
                         >
                             <Clock class="size-3" />
                             {rec.topic.lastRecallAt
-                                ? formatDays(rec.tDays)
+                                ? formatDays(rec.details.tDays)
                                 : "never"}
                         </span>
                     </div>
