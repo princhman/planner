@@ -9,7 +9,7 @@
     import Input from "../ui/input/input.svelte";
     import { useConvexClient } from "convex-svelte";
     import { api } from "$convex/_generated/api";
-    import ConfidenceSelector from "../confidence-selector.svelte";
+    import ConfidenceSelector from "../course/confidence-selector.svelte";
     import * as Popover from "../ui/popover";
 
     function formatDuration(ms: number): string {

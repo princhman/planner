@@ -21,6 +21,7 @@
         parseDate,
         type CalendarDate,
     } from "@internationalized/date";
+    import AddTopic from "$lib/components/course/add-topic.svelte";
 
     let { params }: PageProps = $props();
     let userId = $derived(authState.userId);
@@ -78,16 +79,7 @@
     const topics = useQuery(api.topics.listByCourse, () =>
         userId ? { courseId: params.id as Id<"courses">, userId } : "skip",
     );
-    const addTopic = () => {
-        if (userId) {
-            client.mutation(api.topics.add, {
-                userId,
-                courseId: params.id as Id<"courses">,
-                title: topicTitle,
-            });
-            topicTitle = "";
-        }
-    };
+
     type TopicUpdate = {
         id: Id<"topics">;
         parentId?: Id<"topics">;
@@ -179,7 +171,7 @@
                         size="sm"><FileClock /><span>Backlog mode</span></Button
                     >
                 {/if}
-                {#if isEditMode}
+                {#if !isBacklogMode}
                     <Button
                         variant={showAddTopic ? "default" : "outline"}
                         size="icon-sm"
@@ -257,35 +249,7 @@
             </div>
         {/if}
         {#if showAddTopic}
-            <div
-                class="flex items-end justify-between px-4 py-2 border rounded-sm"
-            >
-                <div class="flex flex-col max-w-96 gap-2">
-                    <span class="text-md font-bold">Add topic</span>
-                    <div class="flex gap-2">
-                        <Label for="new-topic-title" class="px-1">Title</Label>
-                        <Input
-                            id="new-topic-title"
-                            bind:value={topicTitle}
-                            type="text"
-                            class="font-normal"
-                            onkeydown={(e) =>
-                                e.key === "Enter" &&
-                                topicTitle.trim() !== "" &&
-                                addTopic()}
-                        />
-                    </div>
-                </div>
-                <div class="flex justify-end gap-2">
-                    <Button
-                        disabled={!topicTitle.trim()}
-                        onclick={addTopic}
-                        class="px-4 py-2 font-bold"
-                    >
-                        Add
-                    </Button>
-                </div>
-            </div>
+            <AddTopic courseId={params.id as Id<"courses">} />
         {/if}
         {#if topics.data}
             <details

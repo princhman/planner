@@ -190,6 +190,56 @@ export const add = mutation({
   },
 });
 
+export const bulkAdd = mutation({
+  args: {
+    userId: v.id("users"),
+    courseId: v.id("courses"),
+    topics: v.array(
+      v.object({
+        title: v.string(),
+        depth: v.number(),
+      }),
+    ),
+  },
+  handler: async (ctx, { userId, courseId, topics }) => {
+    // track last inserted id per depth level, and running order per (depth, parentId)
+    const lastIdAtDepth = new Map<number, Id<"topics">>();
+    const orderCounters = new Map<string, number>();
+
+    const getOrder = (parentId: Id<"topics"> | undefined): number => {
+      const key = parentId ?? "__root__";
+      const current = (orderCounters.get(key) ?? 0) + 1;
+      orderCounters.set(key, current);
+      return current;
+    };
+
+    for (const topic of topics) {
+      const parentId =
+        topic.depth > 0 ? lastIdAtDepth.get(topic.depth - 1) : undefined;
+
+      if (topic.depth > 0 && !parentId) continue; // skip orphans
+
+      if (parentId) {
+        await ctx.db.patch(parentId, { isLeaf: false });
+      }
+
+      const id = await ctx.db.insert("topics", {
+        userId,
+        courseId,
+        title: topic.title,
+        order: getOrder(parentId),
+        parentId,
+        confidence: 1,
+        stability: initialStabilityToConfidence[0],
+        isLeaf: true,
+        lastRecallAt: undefined,
+      });
+
+      lastIdAtDepth.set(topic.depth, id);
+    }
+  },
+});
+
 export const update = mutation({
   args: {
     updates: v.array(

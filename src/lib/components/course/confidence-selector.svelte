@@ -1,11 +1,8 @@
 <script lang="ts">
     import { slide } from "svelte/transition";
-    import type { ConfidenceCounts, ConfidenceLevel } from "./dnd/types";
+    import type { ConfidenceCounts, ConfidenceLevel } from "../dnd/types";
     import { cn } from "$lib/utils";
-    import {
-        confidenceLabels,
-        confidenceBgColors,
-    } from "$lib/confidence";
+    import { confidenceLabels, confidenceBgColors } from "$lib/confidence";
 
     interface Props {
         value: number;
@@ -54,7 +51,9 @@
                 class={cn(
                     "w-4.5 h-4.5 border",
 
-                    item <= value ? confidenceBgColors[value - 1] : "bg-gray-400",
+                    item <= value
+                        ? confidenceBgColors[value - 1]
+                        : "bg-gray-400",
                 )}
                 onclick={() => onChange(item)}
                 aria-label={confidenceLabels[i - 1]}
