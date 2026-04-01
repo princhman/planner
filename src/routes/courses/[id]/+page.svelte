@@ -9,10 +9,7 @@
     import type { Topic } from "$lib/components/dnd/types";
     import DndList from "$lib/components/dnd/dnd-list.svelte";
     import { FileClock, GraduationCap, Pencil, Plus } from "lucide-svelte";
-    import {
-        confidenceLabels,
-        confidenceBgColors,
-    } from "$lib/confidence";
+    import { confidenceLabels, confidenceBgColors } from "$lib/confidence";
     import * as Breadcrumb from "$lib/components/ui/breadcrumb/index.js";
     import { Label } from "$lib/components/ui/label/index.js";
     import Calendar from "$lib/components/ui/calendar/calendar.svelte";
@@ -38,7 +35,6 @@
     let editName = $state("");
     let editExamDate = $state<CalendarDate | undefined>(undefined);
     let datePickerOpen = $state(false);
-    let isSaving = $state(false);
 
     function initEditFields() {
         editName = course.data?.name ?? "";
@@ -47,15 +43,19 @@
     }
 
     async function saveCourse() {
-        if (!userId || !course.data) return;
-        isSaving = true;
+        if (
+            !userId ||
+            !course.data ||
+            (course.data?.examDate == editExamDate?.toString() &&
+                course.data?.name == editName)
+        )
+            return;
         await client.mutation(api.courses.update, {
             id: params.id as Id<"courses">,
             userId,
             name: editName,
             examDate: editExamDate?.toString() ?? "",
         });
-        isSaving = false;
         isEditMode = false;
         showAddTopic = false;
     }
@@ -196,7 +196,10 @@
                     onclick={() => {
                         if (!isEditMode) initEditFields();
                         isEditMode = !isEditMode;
-                        if (!isEditMode) showAddTopic = false;
+                        if (!isEditMode) {
+                            saveCourse();
+                            showAddTopic = false;
+                        }
                     }}
                 >
                     <Pencil />
@@ -204,7 +207,9 @@
             </div>
         </div>
         {#if isEditMode && course.data}
-            <div class="flex items-end justify-between px-4 py-2 border rounded-sm">
+            <div
+                class="flex items-end justify-between px-4 py-2 border rounded-sm"
+            >
                 <div class="flex flex-col max-w-96 gap-2">
                     <span class="text-md font-bold">Edit course</span>
                     <div class="flex gap-2">
@@ -249,15 +254,12 @@
                         </Popover.Root>
                     </div>
                 </div>
-                <div class="flex justify-end gap-2">
-                    <Button class="px-4 py-2 font-bold" onclick={saveCourse}
-                        >{isSaving ? "Saving..." : "Save"}
-                    </Button>
-                </div>
             </div>
         {/if}
         {#if showAddTopic}
-            <div class="flex items-end justify-between px-4 py-2 border rounded-sm">
+            <div
+                class="flex items-end justify-between px-4 py-2 border rounded-sm"
+            >
                 <div class="flex flex-col max-w-96 gap-2">
                     <span class="text-md font-bold">Add topic</span>
                     <div class="flex gap-2">
@@ -275,7 +277,11 @@
                     </div>
                 </div>
                 <div class="flex justify-end gap-2">
-                    <Button disabled={!topicTitle.trim()} onclick={addTopic} class="px-4 py-2 font-bold">
+                    <Button
+                        disabled={!topicTitle.trim()}
+                        onclick={addTopic}
+                        class="px-4 py-2 font-bold"
+                    >
                         Add
                     </Button>
                 </div>
@@ -292,27 +298,29 @@
                 <div class="mt-1.5 space-y-1 text-sm">
                     {#if isBacklogMode}
                         <p>
-                            Backlog mode: In this mode, you do not update last recall
-                            date, only the confidence and your understanding stability
-                            (how long it takes for your understanding to go from 100% to
-                            90%).
+                            Backlog mode: In this mode, you do not update last
+                            recall date, only the confidence and your
+                            understanding stability (how long it takes for your
+                            understanding to go from 100% to 90%).
                         </p>
                     {:else}
                         <p>
-                            Any confidence update would be considered to be a review,
-                            last recall date would be set to today. To just update
-                            confidence, use backlog mode.
+                            Any confidence update would be considered to be a
+                            review, last recall date would be set to today. To
+                            just update confidence, use backlog mode.
                         </p>
                     {/if}
                     <p>
-                        In summaries, a topic that has subtopics is counted using the
-                        lowest confidence level of its subtopics.
+                        In summaries, a topic that has subtopics is counted
+                        using the lowest confidence level of its subtopics.
                     </p>
                     <div class="flex flex-wrap gap-x-4 gap-y-1 pt-1">
                         {#each confidenceLabels as label, i}
                             <span class="flex items-center gap-1.5">
                                 <div
-                                    class="{confidenceBgColors[i]} size-2.5 rounded-sm"
+                                    class="{confidenceBgColors[
+                                        i
+                                    ]} size-2.5 rounded-sm"
                                 ></div>
                                 {label}
                             </span>
