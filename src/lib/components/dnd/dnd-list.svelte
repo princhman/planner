@@ -26,9 +26,10 @@
         dbTopics: Doc<"topics">[];
         update: (topics: Topic[]) => void;
         courseId: string;
+        isBacklogMode: boolean;
     }
 
-    const { dbTopics, update, courseId }: Props = $props();
+    const { dbTopics, update, courseId, isBacklogMode }: Props = $props();
 
     let dragging = $state(false);
     let topics: Topic[] = $state(prepareForRender(dbTopics));
@@ -229,6 +230,7 @@
                         {toggleCollapse}
                         canCollapse={canCollapse(index)}
                         bind:editingTitleId
+                        {isBacklogMode}
                     />
                 </div>
             {/if}

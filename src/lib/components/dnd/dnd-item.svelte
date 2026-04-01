@@ -28,6 +28,7 @@
         toggleCollapse: (id: Id<"topics">) => void;
         canCollapse: boolean;
         editingTitleId: Id<"topics"> | null;
+        isBacklogMode: boolean;
     }
     let {
         topic,
@@ -36,6 +37,7 @@
         toggleCollapse,
         canCollapse,
         editingTitleId = $bindable(),
+        isBacklogMode,
     }: Props = $props();
 
     const client = useConvexClient();
@@ -72,6 +74,7 @@
         client.mutation(api.topics.updateConfidence, {
             id: topic.id,
             confidence: value,
+            backlogMode: isBacklogMode,
         });
     };
 </script>

@@ -8,11 +8,15 @@
     import Button from "$lib/components/ui/button/button.svelte";
     import type { Topic } from "$lib/components/dnd/types";
     import DndList from "$lib/components/dnd/dnd-list.svelte";
+    import { FileClock, Pencil, Plus } from "lucide-svelte";
 
     let { params }: PageProps = $props();
     let userId = $derived(authState.userId);
+
     const client = useConvexClient();
     let topicTitle = $state("");
+    let isBacklogMode = $state(false);
+
     const course = useQuery(api.courses.get, () =>
         userId ? { id: params.id as Id<"courses">, userId } : "skip",
     );
@@ -80,10 +84,32 @@
 </script>
 
 {#if course}
-    <div class="gap-1 flex">
-        <a href="/">Home</a>
-        <p>{" > "}</p>
-        <p>{course.data?.name}</p>
+    <div class="flex justify-between items-center">
+        <div class="gap-1 flex">
+            <a href="/">Home</a>
+            <p>{" > "}</p>
+            <p>{course.data?.name}</p>
+        </div>
+        <div class="flex gap-1">
+            <Button
+                onclick={() => {
+                    isBacklogMode = !isBacklogMode;
+                }}
+                variant="outline"
+                size="sm"
+                ><FileClock /><span
+                    >{isBacklogMode
+                        ? "Disable backlog"
+                        : "Enable backlog"}</span
+                ></Button
+            >
+            <Button variant="outline" size="icon-sm" onclick={() => {}}>
+                <Plus />
+            </Button>
+            <Button variant="outline" size="icon-sm" onclick={() => {}}>
+                <Pencil />
+            </Button>
+        </div>
     </div>
 {/if}
 <div class="flex">
@@ -104,6 +130,7 @@
             dbTopics={topics.data}
             update={updateTopics}
             courseId={params.id}
+            {isBacklogMode}
         />
     {:else}
         <p>No topics found.</p>
