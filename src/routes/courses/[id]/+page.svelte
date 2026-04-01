@@ -257,13 +257,28 @@
     </div>
 {/if}
 {#if showAddTopic}
-    <div class="flex">
-        <Input
-            bind:value={topicTitle}
-            onkeydown={(e) =>
-                e.key === "Enter" && topicTitle.trim() !== "" && addTopic()}
-        />
-        <Button disabled={!topicTitle.trim()} onclick={addTopic}>Add</Button>
+    <div class="flex items-end justify-between px-4 py-2 border rounded-sm">
+        <div class="flex flex-col max-w-96 gap-2">
+            <span class="text-md font-bold">Add topic</span>
+            <div class="flex gap-2">
+                <Label for="new-topic-title" class="px-1">Title</Label>
+                <Input
+                    id="new-topic-title"
+                    bind:value={topicTitle}
+                    type="text"
+                    class="font-normal"
+                    onkeydown={(e) =>
+                        e.key === "Enter" &&
+                        topicTitle.trim() !== "" &&
+                        addTopic()}
+                />
+            </div>
+        </div>
+        <div class="flex justify-end gap-2">
+            <Button disabled={!topicTitle.trim()} onclick={addTopic} class="px-4 py-2 font-bold">
+                Add
+            </Button>
+        </div>
     </div>
 {/if}
 {#if topics.data}
