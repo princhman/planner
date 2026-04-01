@@ -139,196 +139,198 @@
 </script>
 
 {#if course}
-    <div class="flex justify-between items-center pb-2">
-        <div class="gap-1 flex">
-            <Breadcrumb.Root>
-                <Breadcrumb.List>
-                    <Breadcrumb.Item>
-                        <Breadcrumb.Link href="/">Home</Breadcrumb.Link>
-                    </Breadcrumb.Item>
-                    <Breadcrumb.Separator />
-                    <Breadcrumb.Item>
-                        <Breadcrumb.Page
-                            >{course.data?.name}{isBacklogMode
-                                ? " (backloging)"
-                                : isEditMode
-                                  ? " (editing)"
-                                  : ""}</Breadcrumb.Page
-                        >
-                    </Breadcrumb.Item>
-                </Breadcrumb.List>
-            </Breadcrumb.Root>
-            {#if examLabel}
-                <span
-                    class="flex items-center gap-1 text-xs text-muted-foreground ml-2"
-                    title="Exam {examLabel}"
-                >
-                    <GraduationCap class="size-3.5" />
-                    Exam {examLabel}
-                </span>
-            {/if}
-        </div>
-        <div class="flex gap-1">
-            {#if !isEditMode}
+    <div class="flex flex-col gap-2">
+        <div class="flex justify-between items-center">
+            <div class="gap-1 flex">
+                <Breadcrumb.Root>
+                    <Breadcrumb.List>
+                        <Breadcrumb.Item>
+                            <Breadcrumb.Link href="/">Home</Breadcrumb.Link>
+                        </Breadcrumb.Item>
+                        <Breadcrumb.Separator />
+                        <Breadcrumb.Item>
+                            <Breadcrumb.Page
+                                >{course.data?.name}{isBacklogMode
+                                    ? " (backloging)"
+                                    : isEditMode
+                                      ? " (editing)"
+                                      : ""}</Breadcrumb.Page
+                            >
+                        </Breadcrumb.Item>
+                    </Breadcrumb.List>
+                </Breadcrumb.Root>
+                {#if examLabel}
+                    <span
+                        class="flex items-center gap-1 text-xs text-muted-foreground ml-2"
+                        title="Exam {examLabel}"
+                    >
+                        <GraduationCap class="size-3.5" />
+                        Exam {examLabel}
+                    </span>
+                {/if}
+            </div>
+            <div class="flex gap-1">
+                {#if !isEditMode}
+                    <Button
+                        onclick={() => {
+                            isBacklogMode = !isBacklogMode;
+                        }}
+                        variant={isBacklogMode ? "default" : "outline"}
+                        size="sm"><FileClock /><span>Backlog mode</span></Button
+                    >
+                {/if}
+                {#if isEditMode}
+                    <Button
+                        variant={showAddTopic ? "default" : "outline"}
+                        size="icon-sm"
+                        onclick={() => {
+                            showAddTopic = !showAddTopic;
+                        }}
+                    >
+                        <Plus />
+                    </Button>
+                {/if}
                 <Button
-                    onclick={() => {
-                        isBacklogMode = !isBacklogMode;
-                    }}
-                    variant={isBacklogMode ? "default" : "outline"}
-                    size="sm"><FileClock /><span>Backlog mode</span></Button
-                >
-            {/if}
-            {#if isEditMode}
-                <Button
-                    variant={showAddTopic ? "default" : "outline"}
+                    variant={isEditMode ? "default" : "outline"}
                     size="icon-sm"
                     onclick={() => {
-                        showAddTopic = !showAddTopic;
+                        if (!isEditMode) initEditFields();
+                        isEditMode = !isEditMode;
+                        if (!isEditMode) showAddTopic = false;
                     }}
                 >
-                    <Plus />
+                    <Pencil />
                 </Button>
-            {/if}
-            <Button
-                variant={isEditMode ? "default" : "outline"}
-                size="icon-sm"
-                onclick={() => {
-                    if (!isEditMode) initEditFields();
-                    isEditMode = !isEditMode;
-                    if (!isEditMode) showAddTopic = false;
-                }}
-            >
-                <Pencil />
-            </Button>
-        </div>
-    </div>
-{/if}
-{#if isEditMode && course.data}
-    <div class="flex items-end justify-between px-4 py-2 border rounded-sm">
-        <div class="flex flex-col max-w-96 gap-2">
-            <span class="text-md font-bold">Edit course</span>
-            <div class="flex gap-2">
-                <Label for="edit-name" class="px-1">Name</Label>
-                <Input
-                    id="edit-name"
-                    bind:value={editName}
-                    type="text"
-                    class="font-normal"
-                />
             </div>
-            <div class="flex gap-3">
-                <Label for="edit-date" class="px-1">Exam date</Label>
-                <Popover.Root bind:open={datePickerOpen}>
-                    <Popover.Trigger id="edit-date">
-                        <Button
-                            variant="outline"
-                            class="w-full justify-between font-normal"
-                        >
-                            {editExamDate
-                                ? editExamDate
-                                      .toDate(getLocalTimeZone())
-                                      .toLocaleDateString()
-                                : "Select date"}
-                            <ChevronDownIcon />
-                        </Button>
-                    </Popover.Trigger>
-                    <Popover.Content
-                        class="w-auto overflow-hidden p-0"
-                        align="start"
-                    >
-                        <Calendar
-                            type="single"
-                            bind:value={editExamDate}
-                            captionLayout="dropdown"
-                            onValueChange={() => {
-                                datePickerOpen = false;
-                            }}
-                            minValue={today(getLocalTimeZone())}
+        </div>
+        {#if isEditMode && course.data}
+            <div class="flex items-end justify-between px-4 py-2 border rounded-sm">
+                <div class="flex flex-col max-w-96 gap-2">
+                    <span class="text-md font-bold">Edit course</span>
+                    <div class="flex gap-2">
+                        <Label for="edit-name" class="px-1">Name</Label>
+                        <Input
+                            id="edit-name"
+                            bind:value={editName}
+                            type="text"
+                            class="font-normal"
                         />
-                    </Popover.Content>
-                </Popover.Root>
+                    </div>
+                    <div class="flex gap-3">
+                        <Label for="edit-date" class="px-1">Exam date</Label>
+                        <Popover.Root bind:open={datePickerOpen}>
+                            <Popover.Trigger id="edit-date">
+                                <Button
+                                    variant="outline"
+                                    class="w-full justify-between font-normal"
+                                >
+                                    {editExamDate
+                                        ? editExamDate
+                                              .toDate(getLocalTimeZone())
+                                              .toLocaleDateString()
+                                        : "Select date"}
+                                    <ChevronDownIcon />
+                                </Button>
+                            </Popover.Trigger>
+                            <Popover.Content
+                                class="w-auto overflow-hidden p-0"
+                                align="start"
+                            >
+                                <Calendar
+                                    type="single"
+                                    bind:value={editExamDate}
+                                    captionLayout="dropdown"
+                                    onValueChange={() => {
+                                        datePickerOpen = false;
+                                    }}
+                                    minValue={today(getLocalTimeZone())}
+                                />
+                            </Popover.Content>
+                        </Popover.Root>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <Button class="px-4 py-2 font-bold" onclick={saveCourse}
+                        >{isSaving ? "Saving..." : "Save"}
+                    </Button>
+                </div>
             </div>
-        </div>
-        <div class="flex justify-end gap-2">
-            <Button class="px-4 py-2 font-bold" onclick={saveCourse}
-                >{isSaving ? "Saving..." : "Save"}
-            </Button>
-        </div>
-    </div>
-{/if}
-{#if showAddTopic}
-    <div class="flex items-end justify-between px-4 py-2 border rounded-sm">
-        <div class="flex flex-col max-w-96 gap-2">
-            <span class="text-md font-bold">Add topic</span>
-            <div class="flex gap-2">
-                <Label for="new-topic-title" class="px-1">Title</Label>
-                <Input
-                    id="new-topic-title"
-                    bind:value={topicTitle}
-                    type="text"
-                    class="font-normal"
-                    onkeydown={(e) =>
-                        e.key === "Enter" &&
-                        topicTitle.trim() !== "" &&
-                        addTopic()}
+        {/if}
+        {#if showAddTopic}
+            <div class="flex items-end justify-between px-4 py-2 border rounded-sm">
+                <div class="flex flex-col max-w-96 gap-2">
+                    <span class="text-md font-bold">Add topic</span>
+                    <div class="flex gap-2">
+                        <Label for="new-topic-title" class="px-1">Title</Label>
+                        <Input
+                            id="new-topic-title"
+                            bind:value={topicTitle}
+                            type="text"
+                            class="font-normal"
+                            onkeydown={(e) =>
+                                e.key === "Enter" &&
+                                topicTitle.trim() !== "" &&
+                                addTopic()}
+                        />
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <Button disabled={!topicTitle.trim()} onclick={addTopic} class="px-4 py-2 font-bold">
+                        Add
+                    </Button>
+                </div>
+            </div>
+        {/if}
+        {#if topics.data}
+            <details
+                class="text-sm text-muted-foreground [&>summary]:cursor-pointer [&>summary]:select-none"
+            >
+                <summary
+                    class="text-sm font-medium hover:text-foreground transition-colors w-fit"
+                    >How does this work?</summary
+                >
+                <div class="mt-1.5 space-y-1 text-sm">
+                    {#if isBacklogMode}
+                        <p>
+                            Backlog mode: In this mode, you do not update last recall
+                            date, only the confidence and your understanding stability
+                            (how long it takes for your understanding to go from 100% to
+                            90%).
+                        </p>
+                    {:else}
+                        <p>
+                            Any confidence update would be considered to be a review,
+                            last recall date would be set to today. To just update
+                            confidence, use backlog mode.
+                        </p>
+                    {/if}
+                    <p>
+                        In summaries, a topic that has subtopics is counted using the
+                        lowest confidence level of its subtopics.
+                    </p>
+                    <div class="flex flex-wrap gap-x-4 gap-y-1 pt-1">
+                        {#each confidenceLabels as label, i}
+                            <span class="flex items-center gap-1.5">
+                                <div
+                                    class="{confidenceBgColors[i]} size-2.5 rounded-sm"
+                                ></div>
+                                {label}
+                            </span>
+                        {/each}
+                    </div>
+                </div>
+            </details>
+            {#if topics.data.length > 0}
+                <DndList
+                    dbTopics={topics.data}
+                    update={updateTopics}
+                    courseId={params.id}
+                    {isBacklogMode}
+                    {isEditMode}
                 />
-            </div>
-        </div>
-        <div class="flex justify-end gap-2">
-            <Button disabled={!topicTitle.trim()} onclick={addTopic} class="px-4 py-2 font-bold">
-                Add
-            </Button>
-        </div>
-    </div>
-{/if}
-{#if topics.data}
-    <details
-        class="text-sm text-muted-foreground [&>summary]:cursor-pointer [&>summary]:select-none"
-    >
-        <summary
-            class="text-sm font-medium hover:text-foreground transition-colors w-fit"
-            >How does this work?</summary
-        >
-        <div class="mt-1.5 space-y-1 text-sm">
-            {#if isBacklogMode}
-                <p>
-                    Backlog mode: In this mode, you do not update last recall
-                    date, only the confidence and your understanding stability
-                    (how long it takes for your understanding to go from 100% to
-                    90%).
-                </p>
             {:else}
-                <p>
-                    Any confidence update would be considered to be a review,
-                    last recall date would be set to today. To just update
-                    confidence, use backlog mode.
-                </p>
+                <p>No topics found.</p>
             {/if}
-            <p>
-                In summaries, a topic that has subtopics is counted using the
-                lowest confidence level of its subtopics.
-            </p>
-            <div class="flex flex-wrap gap-x-4 gap-y-1 pt-1">
-                {#each confidenceLabels as label, i}
-                    <span class="flex items-center gap-1.5">
-                        <div
-                            class="{confidenceBgColors[i]} size-2.5 rounded-sm"
-                        ></div>
-                        {label}
-                    </span>
-                {/each}
-            </div>
-        </div>
-    </details>
-    {#if topics.data.length > 0}
-        <DndList
-            dbTopics={topics.data}
-            update={updateTopics}
-            courseId={params.id}
-            {isBacklogMode}
-            {isEditMode}
-        />
-    {:else}
-        <p>No topics found.</p>
-    {/if}
+        {/if}
+    </div>
 {/if}
