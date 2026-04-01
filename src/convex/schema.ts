@@ -27,7 +27,7 @@ export default defineSchema({
     stability: v.number(),
     lastRecallAt: v.optional(v.number()),
   })
-    .index("by_course", ["courseId"])
+    .index("by_user_course", ["userId", "courseId"])
     .index("by_user", ["userId"])
     .index("by_parentId", ["parentId"])
     .index("by_user_leaf_confidence", ["userId", "isLeaf", "confidence"])

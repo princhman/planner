@@ -8,8 +8,7 @@
         finaliseOrder,
         getDiff,
     } from "./utils";
-
-    import type { ConfidenceCounts, Topic } from "./types";
+    import type { ConfidenceCounts, QueryTopic, Topic } from "./types";
     import type {
         DragStartEvent,
         DragOverEvent,
@@ -18,12 +17,12 @@
     } from "@dnd-kit/dom";
     import DndOverlay from "./dnd-overlay.svelte";
     import { move } from "@dnd-kit/helpers";
-    import type { Doc, Id } from "$convex/_generated/dataModel";
+    import type { Id } from "$convex/_generated/dataModel";
     import { slide } from "svelte/transition";
     import { browser } from "$app/environment";
 
     interface Props {
-        dbTopics: Doc<"topics">[];
+        dbTopics: QueryTopic[];
         update: (topics: Topic[]) => void;
         courseId: string;
         isBacklogMode: boolean;

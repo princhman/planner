@@ -75,7 +75,9 @@ export const remove = mutation({
     // Delete related topics
     const topics = await ctx.db
       .query("topics")
-      .withIndex("by_course", (q) => q.eq("courseId", args.id))
+      .withIndex("by_user_course", (q) =>
+        q.eq("userId", args.userId).eq("courseId", args.id),
+      )
       .collect();
     for (const topic of topics) {
       await ctx.db.delete(topic._id);

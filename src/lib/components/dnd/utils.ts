@@ -1,6 +1,5 @@
-import type { ConfidenceCounts, Topic } from "./types";
+import type { ConfidenceCounts, QueryTopic, Topic } from "./types";
 import type { Doc, Id } from "$convex/_generated/dataModel";
-
 // finds where by drag the item can be
 export function getProjection(
   topics: Topic[],
@@ -53,8 +52,8 @@ export function getDescendants(topics: Topic[], index: number): Topic[] {
   return descendants;
 }
 
-export function prepareForRender(topics: Doc<"topics">[]): Topic[] {
-  const childrenOf = new Map<Id<"topics"> | null, Doc<"topics">[]>();
+export function prepareForRender(topics: QueryTopic[]): Topic[] {
+  const childrenOf = new Map<Id<"topics"> | null, QueryTopic[]>();
 
   for (const topic of topics) {
     const siblings = childrenOf.get(topic.parentId ?? null) ?? [];

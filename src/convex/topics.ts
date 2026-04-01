@@ -15,10 +15,31 @@ export const listByCourse = query({
   handler: async (ctx, args) => {
     const topics = await ctx.db
       .query("topics")
-      .withIndex("by_course", (q) => q.eq("courseId", args.courseId))
+      .withIndex("by_user_course", (q) =>
+        q.eq("userId", args.userId).eq("courseId", args.courseId),
+      )
       .collect();
-    // Verify ownership
-    return topics.filter((t) => t.userId === args.userId);
+    const now = Date.now();
+    const dayMs = 86_400_000;
+    return topics.map((topic) => {
+      let nextReview: number | null = null;
+      let r: number | null = null;
+      if (topic.isLeaf) {
+        const s = Math.max(topic.stability ?? 1, 0.05);
+        const tDaysUntilThreshold =
+          s * (81 / 19) * (Math.pow(REVIEW_THRESHOLD, -2) - 1);
+        const lastRecallAt = topic.lastRecallAt ?? now;
+        const reviewAtMs = lastRecallAt + tDaysUntilThreshold * dayMs;
+        nextReview = reviewAtMs - now;
+
+        const tDays = Math.max(
+          0.05,
+          (now - (topic.lastRecallAt ?? now)) / dayMs,
+        );
+        r = Math.pow(1 + (19 / 81) * (tDays / s), -0.5);
+      }
+      return { ...topic, nextReview, r };
+    });
   },
 });
 
@@ -228,7 +249,6 @@ export const updateConfidence = mutation({
       if (args.backlogMode) {
         await ctx.db.patch(args.id, {
           confidence: args.confidence,
-          lastRecallAt: topic.lastRecallAt,
           stability: initialStabilityToConfidence[args.confidence - 1],
         });
       } else {
@@ -237,9 +257,10 @@ export const updateConfidence = mutation({
         // algorithm that was improved by AI, but i understand it
         // some constants that can be improved
         // WU - went up, SS - stayed the same, WD - wend down
-        const WU_CONF = 0.3; // how much conf delta impacts new s
-        const WU_R = 0.6; // how much good review time impacts new s
-        const SS_R = 0.15; // how much good review impacts
+        const WU_CONF = 0.4; // how much conf delta impacts new s
+        const WU_R = 1.5; // how much good review time impacts new s
+        const SS_R = 0.5; // how much good review impacts
+        const SS_C = 1.15; // constant in staty the same
         const WD_C = 0.35; // constant to decrease
         const WD_R = 0.25; // how much review impacts
 
@@ -260,7 +281,7 @@ export const updateConfidence = mutation({
         if (confDelta > 0) {
           newS = s * (1 + WU_CONF * confDelta) * (1 + WU_R * (1 - r)); // reward good time review and good delta
         } else if (confDelta == 0) {
-          newS = s * (1 + SS_R * (1 - r)); // increase a bit, depending on when it was reviewed
+          newS = s * (SS_C + SS_R * (1 - r)); // increase a bit, depending on when it was reviewed
         } else {
           newS = s * (WD_C + WD_R * r); // reducing s for next time
         }

@@ -142,6 +142,19 @@
     </div>
 {/if}
 {#if topics.data}
+    {#if isBacklogMode}
+        <p class="text-gray-500">
+            Backlog mode: In this mode, you do not update last recall date, only
+            the confidence and your understanding stability (how long it takes
+            for your understanding to go from 100% to 90%).
+        </p>
+    {:else}
+        <p class="text-gray-500">
+            Any confidence udpate would be considered to be a review, last
+            recall date would be set to today. To just update confidence, use
+            backlog mode.
+        </p>
+    {/if}
     <p class="text-gray-500">
         In summaries, a topic that has subtopics is counted using the lowest
         confidence level of its subtopics.
