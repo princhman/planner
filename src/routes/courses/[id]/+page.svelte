@@ -8,7 +8,13 @@
     import Button from "$lib/components/ui/button/button.svelte";
     import type { Topic } from "$lib/components/dnd/types";
     import DndList from "$lib/components/dnd/dnd-list.svelte";
-    import { FileClock, GraduationCap, Pencil, Plus } from "lucide-svelte";
+    import {
+        FileClock,
+        GraduationCap,
+        NotepadTextDashed,
+        Pencil,
+        Plus,
+    } from "lucide-svelte";
     import { confidenceLabels, confidenceBgColors } from "$lib/confidence";
     import * as Breadcrumb from "$lib/components/ui/breadcrumb/index.js";
     import { Label } from "$lib/components/ui/label/index.js";
@@ -22,12 +28,13 @@
         type CalendarDate,
     } from "@internationalized/date";
     import AddTopic from "$lib/components/course/add-topic.svelte";
+    import { goto } from "$app/navigation";
+    import CreateTemplate from "$lib/components/course/create-template.svelte";
 
     let { params }: PageProps = $props();
     let userId = $derived(authState.userId);
 
     const client = useConvexClient();
-    let topicTitle = $state("");
     let isBacklogMode = $state(false);
     let isEditMode = $state(false);
     let showAddTopic = $state(false);
@@ -181,28 +188,34 @@
                     >
                         <Plus />
                     </Button>
+                    <Button
+                        variant={isEditMode ? "default" : "outline"}
+                        size="icon-sm"
+                        onclick={() => {
+                            if (!isEditMode) initEditFields();
+                            isEditMode = !isEditMode;
+                            if (!isEditMode) {
+                                saveCourse();
+                                showAddTopic = false;
+                            }
+                        }}
+                    >
+                        <Pencil />
+                    </Button>
                 {/if}
-                <Button
-                    variant={isEditMode ? "default" : "outline"}
-                    size="icon-sm"
-                    onclick={() => {
-                        if (!isEditMode) initEditFields();
-                        isEditMode = !isEditMode;
-                        if (!isEditMode) {
-                            saveCourse();
-                            showAddTopic = false;
-                        }
-                    }}
-                >
-                    <Pencil />
-                </Button>
+                {#if course.data && !isEditMode && !isBacklogMode}
+                    <CreateTemplate
+                        courseName={course.data.name}
+                        courseId={course.data._id}
+                    />
+                {/if}
             </div>
         </div>
         {#if isEditMode && course.data}
             <div
                 class="flex items-end justify-between px-4 py-2 border rounded-sm"
             >
-                <div class="flex flex-col max-w-96 gap-2">
+                <div class="flex flex-col max-w-96 gap-1">
                     <span class="text-md font-bold">Edit course</span>
                     <div class="flex gap-2">
                         <Label for="edit-name" class="px-1">Name</Label>

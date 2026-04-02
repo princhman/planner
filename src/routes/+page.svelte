@@ -7,7 +7,7 @@
 
     import Button from "$lib/components/ui/button/button.svelte";
     import { clearAuth, authState } from "$lib/stores/auth-store.svelte";
-    import { Check, LogOut, PlusIcon } from "lucide-svelte";
+    import { Check, LogOut, NotepadTextDashed, PlusIcon } from "lucide-svelte";
 
     const isAuthenticated = $derived(authState.isAuthenticated);
     let isAddingCourse = $state(false);
@@ -17,7 +17,11 @@
     <div class="flex flex-col gap-2">
         <div class="flex justify-between items-center">
             <span class="text-xl">Planner</span>
-            <div class="flex gap-2">
+            <div class="flex gap-1">
+                <Button variant="outline" size="sm" href="/templates">
+                    <NotepadTextDashed />
+                    Templates</Button
+                >
                 <Button
                     variant={isAddingCourse ? "default" : "outline"}
                     size="icon-sm"

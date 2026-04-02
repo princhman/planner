@@ -5,6 +5,7 @@
     import { setupConvex } from "convex-svelte";
     import { initAuthStore } from "$lib/stores/auth-store.svelte";
     import { onMount } from "svelte";
+    import { Toaster } from "$lib/components/ui/sonner/index.js";
 
     const { children } = $props();
     setupConvex(PUBLIC_CONVEX_URL);
@@ -23,6 +24,8 @@
     <meta name="description" content="what should I revise?" />
     <meta name="theme-color" content="#fafafa" />
 </svelte:head>
+
+<Toaster position="top-center" />
 
 <div class="min-h-screen">
     <main class="mx-auto w-full max-w-2xl px-4 py-5 sm:py-8">

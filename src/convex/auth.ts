@@ -15,6 +15,7 @@ export const signUp = mutation({
   args: {
     email: v.string(),
     password: v.string(),
+    name: v.string(),
   },
   handler: async (ctx, args) => {
     const email = args.email.toLowerCase().trim();
@@ -25,16 +26,17 @@ export const signUp = mutation({
       .first();
 
     if (existing) {
-      throw new Error("An account with this email already exists.");
+      throw new ConvexError("An account with this email already exists.");
     }
 
     if (args.password.length < 8) {
-      throw new Error("Password must be at least 8 characters.");
+      throw new ConvexError("Password must be at least 8 characters.");
     }
 
     const userId = await ctx.db.insert("users", {
       email,
       passwordHash: simpleHash(args.password),
+      name: args.name,
     });
 
     return userId;

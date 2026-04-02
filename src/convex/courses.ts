@@ -32,13 +32,10 @@ export const create = mutation({
     examDate: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const now = Date.now();
     return await ctx.db.insert("courses", {
       userId: args.userId,
       name: args.name,
       examDate: args.examDate,
-      createdAt: now,
-      updatedAt: now,
     });
   },
 });

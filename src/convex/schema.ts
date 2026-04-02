@@ -3,6 +3,7 @@ import { v } from "convex/values";
 
 export default defineSchema({
   users: defineTable({
+    name: v.optional(v.string()),
     email: v.string(),
     passwordHash: v.string(),
   }).index("by_email", ["email"]),
@@ -11,8 +12,9 @@ export default defineSchema({
     userId: v.id("users"),
     name: v.string(),
     examDate: v.optional(v.string()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
+    templateId: v.optional(v.id("templates")),
   }).index("by_user", ["userId"]),
 
   topics: defineTable({
@@ -38,4 +40,17 @@ export default defineSchema({
       "confidence",
     ])
     .index("by_courses_parentId_order", ["courseId", "parentId", "order"]),
+
+  templates: defineTable({
+    name: v.string(),
+    creatorId: v.id("users"),
+    sourceCourseId: v.id("courses"),
+  }).searchIndex("search_name", { searchField: "name" }),
+
+  templateTopics: defineTable({
+    templateId: v.id("templates"),
+    title: v.string(),
+    parentId: v.optional(v.id("templateTopics")),
+    order: v.number(),
+  }).index("by_template", ["templateId"]),
 });

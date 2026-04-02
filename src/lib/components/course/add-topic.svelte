@@ -103,6 +103,7 @@
             <Tabs.Content value="bulk"
                 ><p></p>
                 <Textarea
+                    bind:value={bulkInput}
                     placeholder="Paste your topics here, use tabs for identation, eg:
 Topic 1
     subtopic 2
