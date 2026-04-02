@@ -31,7 +31,7 @@
     {#each courses.data ?? [] as course}
         <a
             href="/courses/{course._id}"
-            class="flex items-center justify-between group hover:bg-gray-600 px-2 my-0.5"
+            class="flex items-center justify-between group hover:bg-gray-600 px-2 my-0.5 rounded-md"
         >
             <div class="flex gap-1 items-center">
                 <p class="text-md">{course.name}</p>

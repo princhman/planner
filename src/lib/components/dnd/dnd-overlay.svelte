@@ -10,7 +10,7 @@
 </script>
 
 <div class="flex" style:margin-left="{depth * 24}px">
-    <span>{order}.</span>
+    <span>{order}.{" "}</span>
     <span>{title}</span>
     {#if childrenNumber > 1}
         <span>({childrenNumber})</span>

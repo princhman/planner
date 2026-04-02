@@ -86,7 +86,7 @@
                 >
                     <div
                         class={cn(
-                            "size-3 rounded-sm shrink-0",
+                            "size-3 rounded-md shrink-0",
                             confidenceBgColors[i],
                         )}
                     ></div>

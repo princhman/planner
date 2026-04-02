@@ -32,7 +32,7 @@
                 {/if}
             {/each}
         </div>
-        <div class="flex h-3 w-22.5 overflow-hidden rounded-sm border">
+        <div class="flex h-3 w-22.5 overflow-hidden rounded-md border">
             {#each [5, 4, 3, 2, 1] as level (level)}
                 {#if confidenceCounts[level as keyof ConfidenceCounts] > 0}
                     <div

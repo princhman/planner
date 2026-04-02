@@ -136,11 +136,10 @@
     </div>
 </div>
 
-{#if template.data}{/if}
 {#if renderTopics}
     {#each renderTopics as item, i (item)}
         <div style:margin-left="{item.depth * 24}px">
-            {item.order}.{item.title}
+            {item.order}. {item.title}
         </div>
     {/each}
 {:else}

@@ -5,13 +5,32 @@ import { Id } from "./_generated/dataModel";
 export const getAll = query({
   args: { query: v.optional(v.string()) },
   handler: async (ctx, { query }) => {
-    if (!query || query.trim() === "") {
-      return ctx.db.query("templates").collect();
-    }
-    return ctx.db
-      .query("templates")
-      .withSearchIndex("search_name", (q) => q.search("name", query ?? ""))
-      .collect();
+    const templates =
+      !query || query.trim() === ""
+        ? await ctx.db.query("templates").collect()
+        : await ctx.db
+            .query("templates")
+            .withSearchIndex("search_name", (q) =>
+              q.search("name", query ?? ""),
+            )
+            .collect();
+
+    const creatorNameMap = new Map<Id<"users">, string>();
+
+    return Promise.all(
+      templates.map(async (template) => {
+        if (!creatorNameMap.has(template.creatorId)) {
+          const user = await ctx.db.get(template.creatorId);
+          if (user) {
+            creatorNameMap.set(template.creatorId, user.name ?? "Unknown");
+          }
+        }
+        return {
+          ...template,
+          creatorName: creatorNameMap.get(template.creatorId) ?? "Unknown",
+        };
+      }),
+    );
   },
 });
 

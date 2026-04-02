@@ -1,8 +1,9 @@
-- [ ] name during sign up
-- [ ] better cards in the templates list, just better view
+- [x] name during sign up
+- [x] better cards in the templates list, just better view
 - [ ] some sort of landing page with a little demo
 - [ ] tour explaining every feature 
 - [ ] deleting course from inside the course
+- [ ] more recommended to do today
 
 Big features:
 - [ ] p1: templates

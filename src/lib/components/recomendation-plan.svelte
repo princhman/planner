@@ -186,7 +186,7 @@
                         </div>
                         {#if i === 0}
                             <span
-                                class="shrink-0 rounded-sm bg-primary/25 border border-primary/40 px-1.5 py-0.5 text-xs font-medium"
+                                class="shrink-0 rounded-md bg-primary/25 border border-primary/40 px-1.5 py-0.5 text-xs font-medium"
                             >
                                 Start here
                             </span>

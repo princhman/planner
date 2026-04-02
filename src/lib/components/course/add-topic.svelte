@@ -77,7 +77,7 @@
     };
 </script>
 
-<div class="px-4 py-2 border rounded-sm">
+<div class="px-4 py-2 border rounded-md">
     <div class="flex flex-col gap-2">
         <Tabs.Root bind:value={tabValue}>
             <div class="flex items-center justify-between gap-4">

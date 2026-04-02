@@ -213,7 +213,7 @@
         </div>
         {#if isEditMode && course.data}
             <div
-                class="flex items-end justify-between px-4 py-2 border rounded-sm"
+                class="flex items-end justify-between px-4 py-2 border rounded-md"
             >
                 <div class="flex flex-col max-w-96 gap-1">
                     <span class="text-md font-bold">Edit course</span>
@@ -297,7 +297,7 @@
                                 <div
                                     class="{confidenceBgColors[
                                         i
-                                    ]} size-2.5 rounded-sm"
+                                    ]} size-2.5 rounded-md"
                                 ></div>
                                 {label}
                             </span>
