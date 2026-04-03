@@ -88,7 +88,6 @@
                 </Tabs.List>
             </div>
             <Tabs.Content value="single" class="flex">
-                <Label for="new-topic-title" class="px-1">Title</Label>
                 <Input
                     id="new-topic-title"
                     bind:value={singleInput}
