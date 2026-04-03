@@ -8,6 +8,7 @@
     import Button from "$lib/components/ui/button/button.svelte";
     import { clearAuth, authState } from "$lib/stores/auth-store.svelte";
     import { Check, LogOut, NotepadTextDashed, PlusIcon } from "lucide-svelte";
+    import Landing from "$lib/components/landing.svelte";
 
     const isAuthenticated = $derived(authState.isAuthenticated);
     let isAddingCourse = $state(false);
@@ -40,6 +41,5 @@
         <RecommendationPlan />
     </div>
 {:else}
-    <span>You need to login</span>
-    <LoginCard />
+    <Landing />
 {/if}

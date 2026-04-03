@@ -1,17 +1,17 @@
-- [x] name during sign up
-- [x] better cards in the templates list, just better view
 - [ ] some sort of landing page with a little demo
 - [ ] tour explaining every feature 
+- [ ] how many more recommended to do today
 - [ ] deleting course from inside the course
-- [ ] more recommended to do today
 
 Big features:
-- [ ] p1: templates
-- [ ] p2: sessions + journal
 - [ ] p2: payment for the app
+- [ ] p2: sessions + journal
 - [ ] p3: course groups / derivations of courses / exam dates that link to some topics
 
 Completed:
+- [x] p1: templates
+- [x] name during sign up
+- [x] better cards in the templates list, just better view
 - [x] confidence rating selector
 - [x] folding topics and preserving a state locally
 - [x] fix that dragging is possible in the folded or hiddenn items

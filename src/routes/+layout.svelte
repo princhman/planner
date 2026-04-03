@@ -6,6 +6,7 @@
     import { initAuthStore } from "$lib/stores/auth-store.svelte";
     import { onMount } from "svelte";
     import { Toaster } from "$lib/components/ui/sonner/index.js";
+    import { authState } from "$lib/stores/auth-store.svelte";
 
     const { children } = $props();
     setupConvex(PUBLIC_CONVEX_URL);
@@ -27,8 +28,6 @@
 
 <Toaster position="top-center" />
 
-<div class="min-h-screen">
-    <main class="mx-auto w-full max-w-2xl px-4 py-5 sm:py-8">
-        {@render children()}
-    </main>
-</div>
+<main class="mx-auto max-w-3xl px-4" class:py-4={authState.isAuthenticated}>
+    {@render children()}
+</main>

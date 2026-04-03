@@ -8,6 +8,7 @@
     import { Input } from "./ui/input";
     import { toast } from "svelte-sonner";
     import Label from "./ui/label/label.svelte";
+    import { goto } from "$app/navigation";
 
     let inProgress = $state(false);
     let isLogin = $state(true);
@@ -35,13 +36,15 @@
                 toast.success("You signed up successfully!");
             }
             setAuthUser(userId, email);
+            goto("/");
         } catch (error) {
             const errorMessage =
                 error instanceof ConvexError
-                    ? (error.data as { message: string }).message
+                    ? typeof error.data === "string"
+                        ? error.data
+                        : (error.data as { message: string }).message
                     : "Unexpected error happened";
             toast.error(errorMessage);
-            console.error(error);
         }
     }
 </script>
