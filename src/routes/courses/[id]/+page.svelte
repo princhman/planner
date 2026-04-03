@@ -138,7 +138,7 @@
 </script>
 
 {#if course}
-    <div class="flex flex-col gap-2">
+    <div class="flex flex-col gap-2 py-4">
         <div class="flex justify-between items-center">
             <div class="gap-1 flex">
                 <Breadcrumb.Root>

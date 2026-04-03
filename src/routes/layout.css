@@ -36,11 +36,6 @@ html {
     outline-color: #a3a3a3;
 }
 
-/* Smooth page transitions */
-main {
-    animation: fadeIn 150ms ease-out;
-}
-
 @keyframes fadeIn {
     from {
         opacity: 0.8;

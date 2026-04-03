@@ -77,7 +77,7 @@
             toast.error("You need to log in to use a template.", {
                 action: {
                     label: "Log in",
-                    onClick: () => goto("/"), // for now just to / but later i will have a login page
+                    onClick: () => goto("/auth"), // for now just to / but later i will have a login page
                 },
             });
         }
@@ -94,7 +94,7 @@
     }
 </script>
 
-<div class="flex justify-between items-center">
+<div class="flex justify-between items-center py-4">
     <Breadcrumb.Root>
         <Breadcrumb.List>
             <Breadcrumb.Item>
