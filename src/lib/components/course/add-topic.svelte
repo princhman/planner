@@ -5,6 +5,7 @@
     import { Button } from "../ui/button";
     import { Input } from "../ui/input";
     import { Label } from "../ui/label";
+    import { tick } from "svelte";
     import type { Id } from "$convex/_generated/dataModel";
     import * as Tabs from "$lib/components/ui/tabs/index.js";
     import { Textarea } from "../ui/textarea";
@@ -110,6 +111,23 @@ Topic 1
 Topic 2
     suptopic 4
     subtopic 5"
+                    onkeydown={(e) => {
+                        if (e.key === "Tab") {
+                            e.preventDefault();
+                            const target = e.currentTarget;
+                            const start = target.selectionStart;
+                            const end = target.selectionEnd;
+                            bulkInput =
+                                bulkInput.substring(0, start) +
+                                "\t" +
+                                bulkInput.substring(end);
+                            // restore cursor position after Svelte updates the DOM
+                            tick().then(() => {
+                                target.selectionStart = target.selectionEnd =
+                                    start + 1;
+                            });
+                        }
+                    }}
                 />
             </Tabs.Content>
             {#if bulkError}

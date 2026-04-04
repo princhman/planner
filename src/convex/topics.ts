@@ -206,11 +206,21 @@ export const bulkAdd = mutation({
     const lastIdAtDepth = new Map<number, Id<"topics">>();
     const orderCounters = new Map<string, number>();
 
+    const existingMax = await ctx.db
+      .query("topics")
+      .withIndex("by_courses_parentId_order", (q) =>
+        q.eq("courseId", courseId).eq("parentId", undefined),
+      )
+      .order("desc")
+      .first();
+
+    let rootOffset = existingMax ? existingMax.order : 0;
+
     const getOrder = (parentId: Id<"topics"> | undefined): number => {
       const key = parentId ?? "__root__";
       const current = (orderCounters.get(key) ?? 0) + 1;
       orderCounters.set(key, current);
-      return current;
+      return parentId ? current : current + rootOffset;
     };
 
     for (const topic of topics) {
@@ -360,7 +370,7 @@ export const deleteTopic = mutation({
   },
 });
 
-export const addBellow = mutation({
+export const addBelow = mutation({
   args: { id: v.id("topics") },
   handler: async (ctx, args) => {
     const topic = await ctx.db.get(args.id);

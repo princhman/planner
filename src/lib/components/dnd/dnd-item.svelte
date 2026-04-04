@@ -93,8 +93,8 @@
         client.mutation(api.topics.deleteTopic, { id: topic.id });
     };
 
-    const addBellow = async () => {
-        const newId = await client.mutation(api.topics.addBellow, {
+    const addBelow = async () => {
+        const newId = await client.mutation(api.topics.addBelow, {
             id: topic.id,
         });
 
@@ -197,8 +197,8 @@
                                         ><Pencil /> Edit</DropdownMenu.Item
                                     >
                                 {/if}
-                                <DropdownMenu.Item onclick={addBellow}
-                                    ><Plus /> Add bellow</DropdownMenu.Item
+                                <DropdownMenu.Item onclick={addBelow}
+                                    ><Plus /> Add below</DropdownMenu.Item
                                 >
                                 <DropdownMenu.Item
                                     variant="destructive"
@@ -238,7 +238,7 @@
                     ><Pencil /> Edit</ContextMenu.Item
                 >
             {/if}
-            <ContextMenu.Item onclick={addBellow}
+            <ContextMenu.Item onclick={addBelow}
                 ><Plus /> Add bellow</ContextMenu.Item
             >
             <ContextMenu.Item variant="destructive" onclick={deleteTopic}
