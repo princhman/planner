@@ -75,7 +75,7 @@
                 </div>
             </div>
 
-            <!-- <div
+            <div
                 class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 py-1"
             >
                 <Button
@@ -87,7 +87,7 @@
                         deletecourse(course._id);
                     }}><Trash2 class="text-red-500" /></Button
                 >
-            </div> -->
+            </div>
         </a>
     {/each}
 </div>
