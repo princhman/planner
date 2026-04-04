@@ -14,6 +14,7 @@
     import * as ContextMenu from "$lib/components/ui/context-menu";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
     import { Ellipsis } from "lucide-svelte";
+    import { cn } from "$lib/utils";
 
     const config = {
         alignment: {
@@ -47,6 +48,7 @@
     }: Props = $props();
 
     const client = useConvexClient();
+    let contextMenuOpen = $state(false);
 
     const isEdit = $derived(editingTitleId === topic.id);
     const anotherIsEdting = $derived(
@@ -109,9 +111,11 @@
     >
         <div class="flex w-full items-center">
             <div
-                class="flex flex-1 w-full items-center {sortable.isDragSource
-                    ? 'bg-gray-700'
-                    : 'max-w-md'}"
+                class={cn(
+                    "flex flex-1 w-full items-center",
+                    sortable.isDragSource ? "bg-gray-700" : "max-w-md",
+                    contextMenuOpen && "rounded-sm ring-1 ring-primary",
+                )}
                 style:margin-left="{topic.depth * 24}px"
             >
                 <div class="w-5 h-5 items-center shrink-0">
@@ -222,7 +226,7 @@
 {/snippet}
 
 {#if isEditMode}
-    <ContextMenu.Root>
+    <ContextMenu.Root bind:open={contextMenuOpen}>
         <ContextMenu.Trigger>{@render itemContent()}</ContextMenu.Trigger>
         <ContextMenu.Content>
             {#if editingTitleId === topic.id}
