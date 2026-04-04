@@ -348,7 +348,85 @@ export const updateConfidence = mutation({
   },
 });
 
+export const deleteTopic = mutation({
+  args: { id: v.id("topics") },
+  handler: async (ctx, args) => {
+    const topic = await ctx.db.get(args.id);
+    if (!topic) return;
+
+    await deleteDescendants(ctx, args.id);
+    await ctx.db.delete(args.id);
+    await verifyOrder(ctx, topic.courseId, topic.parentId);
+  },
+});
+
+export const addBellow = mutation({
+  args: { id: v.id("topics") },
+  handler: async (ctx, args) => {
+    const topic = await ctx.db.get(args.id);
+    if (!topic) return;
+
+    const sibilings = await ctx.db
+      .query("topics")
+      .withIndex("by_parentId", (q) => q.eq("parentId", topic.parentId))
+      .collect();
+
+    for (const sibling of sibilings) {
+      if (sibling.order > topic.order) {
+        await ctx.db.patch(sibling._id, { order: sibling.order + 1 });
+      }
+    }
+
+    return await ctx.db.insert("topics", {
+      userId: topic.userId,
+      courseId: topic.courseId,
+      order: topic.order + 1,
+      parentId: topic.parentId,
+      confidence: 1,
+      stability: 1,
+      lastRecallAt: undefined,
+      isLeaf: true,
+      title: `New Topic`,
+    });
+  },
+});
+
 // helpers
+async function verifyOrder(
+  ctx: MutationCtx,
+  courseId: Id<"courses">,
+  parentId: Id<"topics"> | undefined,
+): Promise<void> {
+  const sibilings = await ctx.db
+    .query("topics")
+    .withIndex("by_courses_parentId_order", (q) =>
+      q.eq("courseId", courseId).eq("parentId", parentId),
+    )
+    .order("asc")
+    .collect();
+
+  for (let i = 0; i < sibilings.length; i++) {
+    const expectedOrder = i + 1;
+    if (sibilings[i].order !== expectedOrder) {
+      await ctx.db.patch(sibilings[i]._id, { order: expectedOrder });
+    }
+  }
+}
+async function deleteDescendants(
+  ctx: MutationCtx,
+  topicId: Id<"topics">,
+): Promise<void> {
+  const children = await ctx.db
+    .query("topics")
+    .withIndex("by_parentId", (q) => q.eq("parentId", topicId))
+    .collect();
+
+  for (const child of children) {
+    await deleteDescendants(ctx, child._id);
+    await ctx.db.delete(child._id);
+  }
+}
+
 async function recomputeAncestorConfidence(
   ctx: MutationCtx,
   parentId: Id<"topics"> | undefined,

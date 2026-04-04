@@ -5,22 +5,15 @@
     import Button from "../ui/button/button.svelte";
     import ChevronRight from "@lucide/svelte/icons/chevron-right";
     import ChevronDown from "@lucide/svelte/icons/chevron-down";
-    import { Brain, Check, GripVertical, Pencil } from "lucide-svelte";
+    import { Check, GripVertical, Pencil, Plus, Trash2 } from "lucide-svelte";
     import Input from "../ui/input/input.svelte";
     import { useConvexClient } from "convex-svelte";
     import { api } from "$convex/_generated/api";
     import ConfidenceSelector from "../course/confidence-selector.svelte";
-    import * as Popover from "../ui/popover";
-
-    function formatDuration(ms: number): string {
-        const abs = Math.abs(ms);
-        const days = Math.floor(abs / 86_400_000);
-        const hours = Math.floor((abs % 86_400_000) / 3_600_000);
-        if (days > 0) return `${days}d ${hours}h`;
-        const minutes = Math.floor((abs % 3_600_000) / 60_000);
-        if (hours > 0) return `${hours}h ${minutes}m`;
-        return `${minutes}m`;
-    }
+    import ItemInfoPopover from "../course/item-info-popover.svelte";
+    import * as ContextMenu from "$lib/components/ui/context-menu";
+    import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+    import { Ellipsis } from "lucide-svelte";
 
     const config = {
         alignment: {
@@ -93,149 +86,162 @@
             backlogMode: isBacklogMode,
         });
     };
+
+    const deleteTopic = () => {
+        client.mutation(api.topics.deleteTopic, { id: topic.id });
+    };
+
+    const addBellow = async () => {
+        const newId = await client.mutation(api.topics.addBellow, {
+            id: topic.id,
+        });
+
+        if (newId) {
+            editingTitleId = newId;
+        }
+    };
 </script>
 
-<div {@attach sortable.attach} class="group relative w-full flex box-border">
-    <div class="flex w-full items-center">
-        <div
-            class="flex flex-1 w-full items-center {sortable.isDragSource
-                ? 'bg-gray-700'
-                : 'max-w-md'}"
-            style:margin-left="{topic.depth * 24}px"
-        >
-            <div class="w-5 h-5 items-center shrink-0">
-                {#if canCollapse}
-                    <Button
-                        size="icon-xs"
-                        variant="ghost"
-                        class="w-5 h-5 p-0"
-                        onclick={() => toggleCollapse(topic.id)}
-                    >
-                        {#if isCollapsed}
-                            <ChevronRight />
-                        {:else}
-                            <ChevronDown />
-                        {/if}
-                    </Button>
-                {/if}
-            </div>
-            <div class="gap-1 flex items-center">
-                <span class="shrink-0">{topic.order}.</span>
-                {#if isEdit}
-                    <Input
-                        bind:value={title}
-                        class="text-inherit! h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
-                        style="font: inherit"
-                        onkeydown={(e) => e.key === "Enter" && updateTitle()}
-                    />
-                {:else}
-                    <span class="flex-1 min-w-0 truncate max-w-xs md:max-w-sm">
-                        {topic.title}</span
-                    >
-                {/if}
-                {#if isEditMode}
-                    <Button
-                        size="icon-xs"
-                        variant="ghost"
-                        disabled={anotherIsEdting}
-                        class="w-5 h-5 p-0 {isEdit
-                            ? 'visible'
-                            : 'lg:invisible'} {!isEdit
-                            ? 'lg:group-hover:visible'
-                            : ''}"
-                        onclick={() =>
-                            isEdit
-                                ? updateTitle()
-                                : (editingTitleId = topic.id)}
-                    >
-                        {#if !isEdit}
-                            <Pencil />
-                        {:else}
+{#snippet itemContent()}
+    <div
+        {@attach sortable.attach}
+        class="group relative w-full flex box-border"
+    >
+        <div class="flex w-full items-center">
+            <div
+                class="flex flex-1 w-full items-center {sortable.isDragSource
+                    ? 'bg-gray-700'
+                    : 'max-w-md'}"
+                style:margin-left="{topic.depth * 24}px"
+            >
+                <div class="w-5 h-5 items-center shrink-0">
+                    {#if canCollapse}
+                        <Button
+                            size="icon-xs"
+                            variant="ghost"
+                            class="w-5 h-5 p-0"
+                            onclick={() => toggleCollapse(topic.id)}
+                        >
+                            {#if isCollapsed}
+                                <ChevronRight />
+                            {:else}
+                                <ChevronDown />
+                            {/if}
+                        </Button>
+                    {/if}
+                </div>
+                <div class="gap-1 flex items-center">
+                    <span class="shrink-0">{topic.order}.</span>
+                    {#if isEdit}
+                        <Input
+                            bind:value={title}
+                            class="text-inherit! h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+                            style="font: inherit"
+                            onkeydown={(e) =>
+                                e.key === "Enter" && updateTitle()}
+                        />
+                    {:else}
+                        <span
+                            class="flex-1 min-w-0 truncate max-w-xs md:max-w-sm"
+                        >
+                            {topic.title}</span
+                        >
+                    {/if}
+                    {#if isEditMode && isEdit}
+                        <Button
+                            size="icon-xs"
+                            variant="ghost"
+                            disabled={anotherIsEdting}
+                            class="w-5 h-5 p-0 {isEdit
+                                ? 'visible'
+                                : 'lg:invisible'} {!isEdit
+                                ? 'lg:group-hover:visible'
+                                : ''}"
+                            onclick={updateTitle}
+                        >
                             <Check />
-                        {/if}
-                    </Button>
-                {:else if topic.isLeaf}
-                    <Popover.Root>
-                        <Popover.Trigger>
-                            {#snippet child({ props })}
-                                <Button
-                                    {...props}
-                                    size="icon-xs"
-                                    variant="ghost"
-                                    class="w-5 h-5 p-0 lg:invisible lg:group-hover:visible"
+                        </Button>
+                    {:else if topic.isLeaf && !isEditMode}
+                        <ItemInfoPopover
+                            stability={topic.stability}
+                            lastRecallAt={topic.lastRecallAt}
+                            r={topic.r}
+                            nextReview={topic.nextReview}
+                        />
+                    {/if}
+                </div>
+            </div>
+
+            <div class="absolute right-0 top-1/2 -translate-y-1/2">
+                {#if isEditMode}
+                    <div class="flex items-center gap-0.5">
+                        <DropdownMenu.Root>
+                            <DropdownMenu.Trigger>
+                                <Ellipsis
+                                    class="text-muted-foreground cursor-pointer lg:invisible lg:group-hover:visible"
+                                />
+                            </DropdownMenu.Trigger>
+                            <DropdownMenu.Content>
+                                {#if editingTitleId === topic.id}
+                                    <DropdownMenu.Item onclick={updateTitle}
+                                        ><Check /> Save</DropdownMenu.Item
+                                    >
+                                {:else}
+                                    <DropdownMenu.Item
+                                        onclick={() =>
+                                            (editingTitleId = topic.id)}
+                                        ><Pencil /> Edit</DropdownMenu.Item
+                                    >
+                                {/if}
+                                <DropdownMenu.Item onclick={addBellow}
+                                    ><Plus /> Add bellow</DropdownMenu.Item
                                 >
-                                    <Brain />
-                                </Button>
-                            {/snippet}
-                        </Popover.Trigger>
-                        <Popover.Content class="w-auto" side="top">
-                            <div class="grid gap-1 text-xs">
-                                <div class="flex justify-between gap-4">
-                                    <span class="text-muted-foreground"
-                                        >Stability</span
-                                    >
-                                    <span
-                                        >{topic.stability?.toFixed(1) ??
-                                            "—"}d</span
-                                    >
-                                </div>
-                                <div class="flex justify-between gap-4">
-                                    <span class="text-muted-foreground"
-                                        >Retrievability</span
-                                    >
-                                    <span
-                                        >{topic.r != null
-                                            ? `${(topic.r * 100).toFixed(0)}%`
-                                            : "—"}</span
-                                    >
-                                </div>
-                                <div class="flex justify-between gap-4">
-                                    <span class="text-muted-foreground"
-                                        >Last recall</span
-                                    >
-                                    <span
-                                        >{topic.lastRecallAt
-                                            ? new Date(
-                                                  topic.lastRecallAt,
-                                              ).toLocaleDateString()
-                                            : "Never"}</span
-                                    >
-                                </div>
-                                <div class="flex justify-between gap-4">
-                                    <span class="text-muted-foreground"
-                                        >Next review</span
-                                    >
-                                    <span>
-                                        {#if topic.nextReview == null}
-                                            —
-                                        {:else if topic.nextReview <= 0}
-                                            Now
-                                        {:else}
-                                            in {formatDuration(
-                                                topic.nextReview,
-                                            )}
-                                        {/if}
-                                    </span>
-                                </div>
-                            </div>
-                        </Popover.Content>
-                    </Popover.Root>
+                                <DropdownMenu.Item
+                                    variant="destructive"
+                                    onclick={deleteTopic}
+                                    ><Trash2 /> Delete</DropdownMenu.Item
+                                >
+                            </DropdownMenu.Content>
+                        </DropdownMenu.Root>
+                        <GripVertical
+                            class="text-muted-foreground cursor-grab"
+                        />
+                    </div>
+                {:else}
+                    <ConfidenceSelector
+                        value={topic.confidence}
+                        onChange={(value: number) => updateConfidence(value)}
+                        readOnly={canCollapse}
+                        confidenceCounts={topic.confidenceCounts! as ConfidenceCounts}
+                        topicName={topic.title}
+                    />
                 {/if}
             </div>
-        </div>
-
-        <div class="absolute right-0 top-1/2 -translate-y-1/2">
-            {#if isEditMode}
-                <GripVertical class="text-muted-foreground cursor-grab" />
-            {:else}
-                <ConfidenceSelector
-                    value={topic.confidence}
-                    onChange={(value: number) => updateConfidence(value)}
-                    readOnly={canCollapse}
-                    confidenceCounts={topic.confidenceCounts! as ConfidenceCounts}
-                    topicName={topic.title}
-                />
-            {/if}
         </div>
     </div>
-</div>
+{/snippet}
+
+{#if isEditMode}
+    <ContextMenu.Root>
+        <ContextMenu.Trigger>{@render itemContent()}</ContextMenu.Trigger>
+        <ContextMenu.Content>
+            {#if editingTitleId === topic.id}
+                <ContextMenu.Item onclick={updateTitle}
+                    ><Check /> Save</ContextMenu.Item
+                >
+            {:else}
+                <ContextMenu.Item onclick={() => (editingTitleId = topic.id)}
+                    ><Pencil /> Edit</ContextMenu.Item
+                >
+            {/if}
+            <ContextMenu.Item onclick={addBellow}
+                ><Plus /> Add bellow</ContextMenu.Item
+            >
+            <ContextMenu.Item variant="destructive" onclick={deleteTopic}
+                ><Trash2 /> Delete</ContextMenu.Item
+            >
+        </ContextMenu.Content>
+    </ContextMenu.Root>
+{:else}
+    {@render itemContent()}
+{/if}

@@ -1,4 +1,5 @@
-- [ ] some sort of landing page with a little demo
+- [ ] deleting a topic
+- [ ] adding after/before/in
 - [ ] tour explaining every feature 
 - [ ] how many more recommended to do today
 - [ ] deleting course from inside the course
@@ -9,6 +10,9 @@ Big features:
 - [ ] p3: course groups / derivations of courses / exam dates that link to some topics
 
 Completed:
+- [x] previewing on the / the subject summary like topic summaries
+- [x] updates from backlog, with no change it goes 3->7, which is a bit too much
+- [x] some sort of landing page with a little demo
 - [x] p1: templates
 - [x] name during sign up
 - [x] better cards in the templates list, just better view
