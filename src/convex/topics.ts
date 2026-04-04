@@ -295,51 +295,55 @@ export const updateConfidence = mutation({
           confidence: args.confidence,
           stability: initialStabilityToConfidence[args.confidence - 1],
         });
-        await recomputeAncestorConfidence(ctx, topic.parentId);
       } else {
-        // maybe should enforce the leaf-only updates
-        // if confidence was not started assign initial s
-        // algorithm that was improved by AI, but i understand it
-        // some constants that can be improved
-        // WU - went up, SS - stayed the same, WD - wend down
-        const WU_CONF = 0.35; // how much conf delta impacts new s
-        const WU_R = 2; // how much good review time impacts new s
-        const SS_R = 1.3; // how much good review impacts
-        const SS_C = 1.15; // constant in staty the same
-        const WD_C = 1.1; // constant to decrease
-        const WD_R = 0.4; // how much review impacts
-
-        const s = topic.stability;
-        const confDelta = args.confidence - topic.confidence;
-
-        // calculate t since last review
         const now = Date.now();
-        const lastRecallAt = topic.lastRecallAt ?? 0;
-        const tMs = Math.max(0, now - lastRecallAt);
-        const t = Math.max(0.05, tMs / 86_400_000);
+        if (topic.lastRecallAt) {
+          // WU - went up, SS - stayed the same, WD - wend down
+          const WU_CONF = 0.35; // how much conf delta impacts new s
+          const WU_R = 2; // how much good review time impacts new s
+          const SS_R = 1.3; // how much good review impacts
+          const SS_C = 1.15; // constant in staty the same
+          const WD_C = 1.1; // constant to decrease
+          const WD_R = 0.4; // how much review impacts
 
-        // calculate r - retriviability (0-1 score of how long since last review, kind of urgency)
-        const r = Math.pow(1 + ((19 / 81) * t) / s, -0.5);
+          const s = topic.stability;
+          const confDelta = args.confidence - topic.confidence;
 
-        // calculate new s (n days to get 100% -> 90% of remembering)
-        let newS: number;
-        if (confDelta > 0) {
-          newS = s * (1 + WU_CONF * confDelta) * (1 + WU_R * (1 - r)); // reward good time review and good delta
-        } else if (confDelta == 0) {
-          newS = s * (SS_C + SS_R * (1 - r)); // increase a bit, depending on when it was reviewed
+          // calculate t since last review
+          const t = Math.max(
+            0.05,
+            Math.max(0, now - topic.lastRecallAt) / 86_400_000,
+          );
+
+          // calculate r - retriviability (0-1 score of how long since last review, kind of urgency)
+          const r = Math.pow(1 + ((19 / 81) * t) / s, -0.5);
+
+          // calculate new s (n days to get 100% -> 90% of remembering)
+          let newS: number;
+          if (confDelta > 0) {
+            newS = s * (1 + WU_CONF * confDelta) * (1 + WU_R * (1 - r)); // reward good time review and good delta
+          } else if (confDelta == 0) {
+            newS = s * (SS_C + SS_R * (1 - r)); // increase a bit, depending on when it was reviewed
+          } else {
+            newS = s * (WD_C + WD_R * r); // reducing s for next time
+          }
+
+          await ctx.db.patch(args.id, {
+            confidence: args.confidence,
+            lastRecallAt: now,
+            stability: newS,
+          });
         } else {
-          newS = s * (WD_C + WD_R * r); // reducing s for next time
+          await ctx.db.patch(args.id, {
+            confidence: args.confidence,
+            stability: initialStabilityToConfidence[args.confidence - 1],
+            lastRecallAt: now,
+          });
         }
 
-        await ctx.db.patch(args.id, {
-          confidence: args.confidence,
-          lastRecallAt: now,
-          stability: newS,
-        });
-
         // recompute for ancestors
-        await recomputeAncestorConfidence(ctx, topic.parentId);
       }
+      await recomputeAncestorConfidence(ctx, topic.parentId);
     }
   },
 });
