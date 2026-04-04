@@ -233,6 +233,7 @@
                     onChange={(value: number) => updateConfidence(value)}
                     readOnly={canCollapse}
                     confidenceCounts={topic.confidenceCounts! as ConfidenceCounts}
+                    topicName={topic.title}
                 />
             {/if}
         </div>
