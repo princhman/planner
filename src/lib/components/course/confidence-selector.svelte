@@ -15,10 +15,6 @@
 
     let { value, onChange, readOnly, confidenceCounts, topicName }: Props =
         $props();
-
-    const total = $derived(
-        Object.values(confidenceCounts).reduce((a, b) => a + b, 0),
-    );
 </script>
 
 {#if readOnly}
