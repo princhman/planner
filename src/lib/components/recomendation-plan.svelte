@@ -124,9 +124,12 @@
                 class="rounded-md border bg-transparent px-2 py-1 text-sm"
                 bind:value={courseId}
             >
-                <option value={undefined}>All courses</option>
+                <option class="text-black" value={undefined}>All courses</option
+                >
                 {#each courses.data as course (course._id)}
-                    <option value={course._id}>{course.name}</option>
+                    <option class="text-black" value={course._id}
+                        >{course.name}</option
+                    >
                 {/each}
             </select>
             <RecomendationSettingsPopover
