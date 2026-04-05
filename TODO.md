@@ -1,7 +1,10 @@
-- [ ] some sort of landing page with a little demo
 - [ ] tour explaining every feature 
+- [ ] save button on course edit
+- [ ] (Into edit mode, create template) on left click and exit out of edit mode via context menu
 - [ ] how many more recommended to do today
 - [ ] deleting course from inside the course
+- [ ] if it was unfolded during drag, it should fold back again if it is not used
+- [ ] multiselect
 
 Big features:
 - [ ] p2: payment for the app
@@ -9,6 +12,11 @@ Big features:
 - [ ] p3: course groups / derivations of courses / exam dates that link to some topics
 
 Completed:
+- [x] deleting a topic
+- [x] adding after/before/in
+- [x] previewing on the / the subject summary like topic summaries
+- [x] updates from backlog, with no change it goes 3->7, which is a bit too much
+- [x] some sort of landing page with a little demo
 - [x] p1: templates
 - [x] name during sign up
 - [x] better cards in the templates list, just better view

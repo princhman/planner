@@ -23,6 +23,9 @@ importers:
       '@sveltejs/adapter-vercel':
         specifier: ^6.3.3
         version: 6.3.3(@sveltejs/kit@2.55.0(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.54.0)(vite@7.3.1(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)))(svelte@5.54.0)(typescript@5.9.3)(vite@7.3.1(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)))(rollup@4.59.0)
+      '@workos-inc/node':
+        specifier: ^8.11.0
+        version: 8.11.0
       bits-ui:
         specifier: ^2.16.3
         version: 2.16.3(@internationalized/date@3.12.0)(@sveltejs/kit@2.55.0(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.54.0)(vite@7.3.1(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)))(svelte@5.54.0)(typescript@5.9.3)(vite@7.3.1(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)))(svelte@5.54.0)
@@ -950,6 +953,10 @@ packages:
     resolution: {integrity: sha512-IWTDeIoWhQ7ZtRO/JRKH+jhmeQvZYhtGPmzw/QGDY+wDCQqfm25P9yIdoAFagu4fWsK4IwZXDFIjrmp5rRm/sA==}
     engines: {node: '>=20'}
     hasBin: true
+
+  '@workos-inc/node@8.11.0':
+    resolution: {integrity: sha512-p1kcI6MRlq7jfqg77ZNwP+kvVbE/pr9VyYtJjYAhlT8OUhCVXLvh/fzmaqa2d/rcQgH6U05/mrW2qew16zqtgw==}
+    engines: {node: '>=20.15.0'}
 
   abbrev@3.0.1:
     resolution: {integrity: sha512-AO2ac6pjRB3SJmGJo+v5/aK6Omggp6fsLrs6wN9bd35ulu4cCwaAU9+7ZhXjeqHVkaHThLuzH0nZr0YpCDhygg==}
@@ -2156,6 +2163,8 @@ snapshots:
       - encoding
       - rollup
       - supports-color
+
+  '@workos-inc/node@8.11.0': {}
 
   abbrev@3.0.1: {}
 
