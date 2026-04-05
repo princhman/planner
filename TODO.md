@@ -1,8 +1,10 @@
 - [ ] tour explaining every feature 
+- [ ] save button on course edit
 - [ ] (Into edit mode, create template) on left click and exit out of edit mode via context menu
 - [ ] how many more recommended to do today
 - [ ] deleting course from inside the course
 - [ ] if it was unfolded during drag, it should fold back again if it is not used
+- [ ] multiselect
 
 Big features:
 - [ ] p2: payment for the app
