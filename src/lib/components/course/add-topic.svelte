@@ -1,6 +1,6 @@
 <script lang="ts">
+    // Generated with AI
     import { api } from "$convex/_generated/api";
-    import { authState } from "$lib/stores/auth-store.svelte";
     import { useConvexClient } from "convex-svelte";
     import { Button } from "../ui/button";
     import { Input } from "../ui/input";
@@ -15,7 +15,6 @@
     let bulkInput = $state("");
     let tabValue = $state("single");
 
-    const userId = $derived(authState.userId);
     const client = useConvexClient();
 
     function parseBulkInput(input: string) {
@@ -49,30 +48,26 @@
     let bulkError = $state<string | null>(null);
 
     const addTopic = () => {
-        if (userId) {
-            if (tabValue === "bulk") {
-                const parsed = parseBulkInput(bulkInput);
-                if (parsed.length === 0) return;
-                const error = validateBulkTopics(parsed);
-                if (error) {
-                    bulkError = error;
-                    return;
-                }
-                bulkError = null;
-                client.mutation(api.topics.bulkAdd, {
-                    userId,
-                    courseId,
-                    topics: parsed,
-                });
-                bulkInput = "";
-            } else {
-                client.mutation(api.topics.add, {
-                    userId,
-                    courseId,
-                    title: singleInput,
-                });
-                singleInput = "";
+        if (tabValue === "bulk") {
+            const parsed = parseBulkInput(bulkInput);
+            if (parsed.length === 0) return;
+            const error = validateBulkTopics(parsed);
+            if (error) {
+                bulkError = error;
+                return;
             }
+            bulkError = null;
+            client.mutation(api.topics.bulkAdd, {
+                courseId,
+                topics: parsed,
+            });
+            bulkInput = "";
+        } else {
+            client.mutation(api.topics.add, {
+                courseId,
+                title: singleInput,
+            });
+            singleInput = "";
         }
     };
 </script>

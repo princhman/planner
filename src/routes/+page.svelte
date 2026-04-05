@@ -1,16 +1,20 @@
+<!-- Generated with AI -->
 <script lang="ts">
     import CreatecourseCard from "$lib/components/create-course-card.svelte";
-
-    import LoginCard from "$lib/components/login-card.svelte";
     import CourseList from "$lib/components/course-list.svelte";
     import RecommendationPlan from "$lib/components/recomendation-plan.svelte";
 
     import Button from "$lib/components/ui/button/button.svelte";
-    import { clearAuth, authState } from "$lib/stores/auth-store.svelte";
-    import { Check, LogOut, NotepadTextDashed, PlusIcon } from "lucide-svelte";
+    import { LogOut, NotepadTextDashed, PlusIcon } from "lucide-svelte";
     import Landing from "$lib/components/landing.svelte";
+    import type { PageData } from "./$types";
 
-    const isAuthenticated = $derived(authState.isAuthenticated);
+    // `data` comes from the parent +layout.server.ts (flows down to all pages)
+    // It contains { user, token } — the auth info from the cookie.
+    const { data }: { data: PageData } = $props();
+
+    // Instead of reading localStorage, we check if the server found a valid user
+    const isAuthenticated = $derived(!!data.user);
     let isAddingCourse = $state(false);
 </script>
 
@@ -29,7 +33,8 @@
                     onclick={() => (isAddingCourse = !isAddingCourse)}
                     ><PlusIcon /></Button
                 >
-                <Button variant="outline" size="icon-sm" onclick={clearAuth}
+                <!-- Logout now hits the server route that clears cookies -->
+                <Button variant="outline" size="icon-sm" href="/auth/logout"
                     ><LogOut /></Button
                 >
             </div>

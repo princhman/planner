@@ -10,7 +10,6 @@
         type CalendarDate,
     } from "@internationalized/date";
     import Input from "./ui/input/input.svelte";
-    import { authState } from "$lib/stores/auth-store.svelte";
     import { useConvexClient } from "convex-svelte";
     import { api } from "$convex/_generated/api";
 
@@ -20,19 +19,14 @@
 
     let open = $state(false);
 
-    const userId = $derived(authState.userId);
     const client = useConvexClient();
 
     async function create() {
         isCreating = true;
-        if (userId) {
-            await client.mutation(api.courses.create, {
-                examDate: date?.toString() ?? "",
-                userId: userId,
-                name,
-            });
-            console.log("Created");
-        }
+        await client.mutation(api.courses.create, {
+            examDate: date?.toString() ?? "",
+            name,
+        });
         isCreating = false;
         date = undefined;
         name = "";

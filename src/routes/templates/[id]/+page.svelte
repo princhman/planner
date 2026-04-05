@@ -1,18 +1,19 @@
 <!-- Nice preview of the template + a button to create a course from it -->
 <script lang="ts">
+    // Generated with AI
     import { api } from "$convex/_generated/api";
     import { useConvexClient, useQuery } from "convex-svelte";
     import type { PageProps } from "./$types";
     import type { Id } from "$convex/_generated/dataModel";
     import type { FunctionReturnType } from "convex/server";
     import * as Breadcrumb from "$lib/components/ui/breadcrumb";
-    import { authState } from "$lib/stores/auth-store.svelte";
     import Button from "$lib/components/ui/button/button.svelte";
     import { Copy, Link, Trash2 } from "lucide-svelte";
     import { goto } from "$app/navigation";
     import { toast } from "svelte-sonner";
+    import type { PageData } from "./$types";
 
-    const { params }: PageProps = $props();
+    const { params, data }: PageProps & { data: PageData } = $props();
 
     type templateTopicQuery = FunctionReturnType<
         typeof api.templates.getTopics
@@ -57,17 +58,16 @@
     const renderTopics: withDepth[] = $derived(
         deriveDepth(templateTopics.data ?? []),
     );
-    const userId = $derived(authState.userId);
-    const isCreator = $derived(userId == template.data?.creatorId);
+
+    const isAuthenticated = $derived(!!data?.user);
 
     async function useTemplate() {
-        if (userId) {
+        if (isAuthenticated) {
             if (template.data) {
                 const courseId = await client.mutation(
                     api.templates.createCourseFromTemplate,
                     {
                         templateId: template.data._id,
-                        userId,
                     },
                 );
                 toast.success(`Course "${template.data.name}" is created!`);
@@ -77,7 +77,7 @@
             toast.error("You need to log in to use a template.", {
                 action: {
                     label: "Log in",
-                    onClick: () => goto("/"), // for now just to / but later i will have a login page
+                    onClick: () => goto("/auth"),
                 },
             });
         }
@@ -114,11 +114,8 @@
         </Breadcrumb.List>
     </Breadcrumb.Root>
     <div class="flex items-center gap-1">
-        <Button
-            size="sm"
-            disabled={isCreator}
-            onclick={useTemplate}
-            variant="outline"><Copy /> Use it</Button
+        <Button size="sm" onclick={useTemplate} variant="outline"
+            ><Copy /> Use it</Button
         >
         <Button
             size="icon-sm"
@@ -128,7 +125,7 @@
                 toast.success("Link copied!");
             }}><Link /></Button
         >
-        {#if isCreator}
+        {#if isAuthenticated}
             <Button size="icon-sm" variant="outline" onclick={deleteTemplate}
                 ><Trash2 class="text-red-500" /></Button
             >
