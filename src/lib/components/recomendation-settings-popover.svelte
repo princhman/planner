@@ -1,5 +1,4 @@
 <script lang="ts">
-    import type { Id, Doc } from "$convex/_generated/dataModel";
     import { Settings } from "lucide-svelte";
     import * as Popover from "./ui/popover/index";
     import Switch from "./ui/switch/switch.svelte";

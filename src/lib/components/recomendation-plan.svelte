@@ -48,7 +48,11 @@
                 ? (JSON.parse(rawCourse) as Id<"courses">)
                 : undefined;
             courseId = parsedCourse;
+        } catch (error) {
+            courseId = undefined;
+        }
 
+        try {
             const rawInclude = localStorage.getItem(
                 "recomendation-plan-filter-includeNotStarted",
             );
@@ -64,8 +68,8 @@
                 applyThresholds = JSON.parse(rawThresholds) as boolean;
             }
         } catch {
-            courseId = undefined;
             includeNotStarted = true;
+            applyThresholds = true;
         }
     }
 
