@@ -14,6 +14,7 @@
         NotepadTextDashed,
         Pencil,
         Plus,
+        Save,
     } from "lucide-svelte";
     import { confidenceLabels, confidenceBgColors } from "$lib/confidence";
     import * as Breadcrumb from "$lib/components/ui/breadcrumb/index.js";
@@ -190,7 +191,7 @@
                     </Button>
                     <Button
                         variant={isEditMode ? "default" : "outline"}
-                        size="icon-sm"
+                        size={!isEditMode ? "icon-sm" : "sm"}
                         onclick={() => {
                             if (!isEditMode) initEditFields();
                             isEditMode = !isEditMode;
@@ -200,7 +201,12 @@
                             }
                         }}
                     >
-                        <Pencil />
+                        {#if !isEditMode}
+                            <Pencil />
+                        {:else}
+                            <Save />
+                            Save
+                        {/if}
                     </Button>
                 {/if}
                 {#if course.data && !isEditMode && !isBacklogMode}
