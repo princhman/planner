@@ -5,7 +5,6 @@
 
     import { PUBLIC_CONVEX_URL } from "$env/static/public";
     import { setupConvex, useConvexClient } from "convex-svelte";
-    import { onMount } from "svelte";
     import { Toaster } from "$lib/components/ui/sonner/index.js";
 
     const { children, data } = $props();
@@ -14,9 +13,15 @@
 
     const client = useConvexClient();
 
-    onMount(() => {
+    // $effect runs whenever data.token changes (login or logout).
+    // After logout, data.token becomes null → we clear Convex auth.
+    // After login, data.token has the JWT → we set it on Convex.
+    $effect(() => {
         if (data.token) {
             client.setAuth(() => Promise.resolve(data.token));
+        } else {
+            // Returning null tells Convex "no user is logged in"
+            client.setAuth(() => Promise.resolve(null));
         }
     });
 
