@@ -313,7 +313,7 @@ export const updateConfidence = mutation({
           const WU_R = 2; // how much good review time impacts new s
           const SS_R = 1.3; // how much good review impacts
           const SS_C = 1.15; // constant in staty the same
-          const WD_C = 1.1; // constant to decrease
+          const WD_C = 0.65; // constant to decrease
           const WD_R = 0.4; // how much review impacts
 
           const s = topic.stability;
@@ -335,7 +335,7 @@ export const updateConfidence = mutation({
           } else if (confDelta == 0) {
             newS = s * (SS_C + SS_R * (1 - r)); // increase a bit, depending on when it was reviewed
           } else {
-            newS = s * (WD_C + WD_R * r); // reducing s for next time
+            newS = s * (WD_C + WD_R * (1 - r)); // reducing s for next time
           }
 
           await ctx.db.patch(args.id, {
