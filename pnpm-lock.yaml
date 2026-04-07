@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@convex-dev/stripe':
-        specifier: ^0.1.4
-        version: 0.1.4(@types/node@25.5.0)(convex@1.34.0(react@19.2.4))(react@19.2.4)
       '@convex-dev/workos-authkit':
         specifier: ^0.2.2
         version: 0.2.2(@standard-schema/spec@1.1.0)(@types/node@25.5.0)(@workos-inc/authkit-react@0.11.0(react@19.2.4))(@workos-inc/node@8.12.0)(convex@1.34.0(react@19.2.4))(jiti@2.6.1)(lightningcss@1.32.0)(react@19.2.4)(typescript@5.9.3)
@@ -55,8 +52,8 @@ importers:
         specifier: ^3.12.0
         version: 3.12.0
       '@lucide/svelte':
-        specifier: ^1.7.0
-        version: 1.7.0(svelte@5.54.0)
+        specifier: ^0.561.0
+        version: 0.561.0(svelte@5.54.0)
       '@sveltejs/kit':
         specifier: ^2.50.2
         version: 2.55.0(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.54.0)(vite@7.3.1(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)))(svelte@5.54.0)(typescript@5.9.3)(vite@7.3.1(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0))
@@ -131,12 +128,6 @@ packages:
   '@babel/types@7.29.0':
     resolution: {integrity: sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==}
     engines: {node: '>=6.9.0'}
-
-  '@convex-dev/stripe@0.1.4':
-    resolution: {integrity: sha512-HnINm3K2QHGvP0X4YV7KruCjQ1Ni0HE1qpJ5rZYjfdUbMcqJsX4ZYTmOo7tL83qtokS3EahKVkhXLCH/9Ms/og==}
-    peerDependencies:
-      convex: ^1.29.3
-      react: ^18.3.1 || ^19.0.0
 
   '@convex-dev/workflow@0.3.9':
     resolution: {integrity: sha512-jkNhQni+mdeh5E3ZfDrmFXUodCmr1PfJAtFhLVw8zxbQQt1Yk4yr3JXAPOvVxMG2jqIwERyzD71XTaFGebDzuQ==}
@@ -700,8 +691,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@lucide/svelte@1.7.0':
-    resolution: {integrity: sha512-YytBKOUBGox7yWcykZnYxOkn5WpR5G1qYXLYXV/j1B79SOTTEKzB+s5yF5Rq9l9OkweDStNH2b4yTqfvhEhV8g==}
+  '@lucide/svelte@0.561.0':
+    resolution: {integrity: sha512-vofKV2UFVrKE6I4ewKJ3dfCXSV6iP6nWVmiM83MLjsU91EeJcEg7LoWUABLp/aOTxj1HQNbJD1f3g3L0JQgH9A==}
     peerDependencies:
       svelte: ^5
 
@@ -1759,15 +1750,6 @@ packages:
   strip-literal@3.1.0:
     resolution: {integrity: sha512-8r3mkIM/2+PpjHoOtiAW8Rg3jJLHaV7xPwG+YRGrv6FP0wwk/toTpATxWYOW0BKdWwl82VT2tFYi5DlROa0Mxg==}
 
-  stripe@20.4.1:
-    resolution: {integrity: sha512-axCguHItc8Sxt0HC6aSkdVRPffjYPV7EQqZRb2GkIa8FzWDycE7nHJM19C6xAIynH1Qp1/BHiopSi96jGBxT0w==}
-    engines: {node: '>=16'}
-    peerDependencies:
-      '@types/node': '>=16'
-    peerDependenciesMeta:
-      '@types/node':
-        optional: true
-
   style-to-object@1.0.14:
     resolution: {integrity: sha512-LIN7rULI0jBscWQYaSswptyderlarFkjQ+t79nzty8tcIAceVomEVlLzH5VP4Cmsv6MtKhs7qaAiwlcp+Mgaxw==}
 
@@ -2052,14 +2034,6 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
-
-  '@convex-dev/stripe@0.1.4(@types/node@25.5.0)(convex@1.34.0(react@19.2.4))(react@19.2.4)':
-    dependencies:
-      convex: 1.34.0(react@19.2.4)
-      react: 19.2.4
-      stripe: 20.4.1(@types/node@25.5.0)
-    transitivePeerDependencies:
-      - '@types/node'
 
   '@convex-dev/workflow@0.3.9(@convex-dev/workpool@0.4.6(convex-helpers@0.1.114(@standard-schema/spec@1.1.0)(convex@1.34.0(react@19.2.4))(react@19.2.4)(typescript@5.9.3))(convex@1.34.0(react@19.2.4)))(convex-helpers@0.1.114(@standard-schema/spec@1.1.0)(convex@1.34.0(react@19.2.4))(react@19.2.4)(typescript@5.9.3))(convex@1.34.0(react@19.2.4))':
     dependencies:
@@ -2485,7 +2459,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@lucide/svelte@1.7.0(svelte@5.54.0)':
+  '@lucide/svelte@0.561.0(svelte@5.54.0)':
     dependencies:
       svelte: 5.54.0
 
@@ -3440,10 +3414,6 @@ snapshots:
   strip-literal@3.1.0:
     dependencies:
       js-tokens: 9.0.1
-
-  stripe@20.4.1(@types/node@25.5.0):
-    optionalDependencies:
-      '@types/node': 25.5.0
 
   style-to-object@1.0.14:
     dependencies:

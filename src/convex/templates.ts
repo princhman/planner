@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { getAuthUserOrThrow } from "./auth.js";
+import { getAuthUser, getAuthUserOrThrow } from "./auth.js";
 
 export const getAll = query({
   args: { query: v.optional(v.string()) },
@@ -42,8 +42,13 @@ export const get = query({
     if (!template) {
       return null;
     }
-    const user = await ctx.db.get(template.creatorId);
-    return { ...template, creatorName: user ? user.name : "Unknown" };
+    const currentUser = await getAuthUser(ctx);
+    const creator = await ctx.db.get(template.creatorId);
+    return {
+      ...template,
+      creatorName: creator ? creator.name : "Unknown",
+      isCreator: currentUser?._id === template.creatorId,
+    };
   },
 });
 
@@ -111,6 +116,10 @@ export const deleteTemplate = mutation({
   },
   handler: async (ctx, { templateId }) => {
     const user = await getAuthUserOrThrow(ctx);
+    const template = await ctx.db.get(templateId);
+    if (!template || template.creatorId !== user._id) {
+      throw new Error("Template not found");
+    }
     await ctx.db.delete(templateId);
   },
 });

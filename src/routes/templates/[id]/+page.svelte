@@ -60,6 +60,7 @@
     );
 
     const isAuthenticated = $derived(!!data?.user);
+    const isCreator = $derived(!!template.data?.isCreator);
 
     async function useTemplate() {
         if (isAuthenticated) {
@@ -77,7 +78,7 @@
             toast.error("You need to log in to use a template.", {
                 action: {
                     label: "Log in",
-                    onClick: () => goto("/auth"),
+                    onClick: () => goto("/auth/login"),
                 },
             });
         }
@@ -94,7 +95,7 @@
     }
 </script>
 
-<div class="flex justify-between items-center">
+<div class="flex justify-between items-center py-4">
     <Breadcrumb.Root>
         <Breadcrumb.List>
             <Breadcrumb.Item>
@@ -125,7 +126,7 @@
                 toast.success("Link copied!");
             }}><Link /></Button
         >
-        {#if isAuthenticated}
+        {#if isCreator}
             <Button size="icon-sm" variant="outline" onclick={deleteTemplate}
                 ><Trash2 class="text-red-500" /></Button
             >

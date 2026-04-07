@@ -9,10 +9,37 @@ export const list = query({
   handler: async (ctx) => {
     const user = await getAuthUser(ctx);
     if (!user) return [];
-    return await ctx.db
+    const course = await ctx.db
       .query("courses")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
+
+    return Promise.all(
+      course.map(async (course) => {
+        const leafTopics = await ctx.db
+          .query("topics")
+          .withIndex("by_user_course_leaf_confidence", (q) =>
+            q
+              .eq("userId", user._id)
+              .eq("courseId", course._id)
+              .eq("isLeaf", true),
+          )
+          .collect();
+        const confidenceToCountMap = leafTopics.reduce(
+          (acc, topic) => {
+            const level = topic.confidence as 1 | 2 | 3 | 4 | 5;
+            acc[level] = (acc[level] ?? 0) + 1;
+            return acc;
+          },
+          {} as Record<1 | 2 | 3 | 4 | 5, number>,
+        );
+        return {
+          ...course,
+          leafCount: leafTopics.length,
+          confidenceToCountMap,
+        };
+      }),
+    );
   },
 });
 

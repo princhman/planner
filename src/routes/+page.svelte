@@ -19,7 +19,7 @@
 </script>
 
 {#if isAuthenticated}
-    <div class="flex flex-col gap-2">
+    <div class="flex flex-col gap-2 py-4">
         <div class="flex justify-between items-center">
             <span class="text-xl">Planner</span>
             <div class="flex gap-1">

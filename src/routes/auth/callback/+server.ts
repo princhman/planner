@@ -1,9 +1,10 @@
 import { redirect } from "@sveltejs/kit";
 import { WorkOS } from "@workos-inc/node";
-import { WORKOS_API_KEY, WORKOS_CLIENT_ID } from "$env/static/private";
+import { WORKOS_API_KEY, WORKOS_CLIENT_ID, ORIGIN } from "$env/static/private";
 import type { RequestHandler } from "./$types";
 
 const workos = new WorkOS(WORKOS_API_KEY);
+const isProduction = ORIGIN.startsWith("https://");
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
   const code = url.searchParams.get("code");
@@ -21,7 +22,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
   cookies.set("workos_access_token", accessToken, {
     path: "/",
     httpOnly: true,
-    secure: false, // set to true in production
+    secure: isProduction,
     sameSite: "lax",
     maxAge: 60 * 60, // 1 hour
   });
@@ -29,7 +30,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
   cookies.set("workos_refresh_token", refreshToken, {
     path: "/",
     httpOnly: true,
-    secure: false,
+    secure: isProduction,
     sameSite: "lax",
     maxAge: 60 * 60 * 24 * 30, // 30 days
   });

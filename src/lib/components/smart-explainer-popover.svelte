@@ -15,7 +15,7 @@
             <p class="font-medium">Smart scheduling</p>
             <p class="text-muted-foreground">
                 Uses spaced repetition to only show topics when your memory is
-                about to fade. Shows only those where retention is bellow 90%.
+                about to fade. Shows only those where retention is below 90%.
             </p>
             <p class="text-muted-foreground">
                 When off, all topics are shown ranked by priority.

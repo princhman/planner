@@ -1,6 +1,6 @@
 import { redirect } from "@sveltejs/kit";
 import { WorkOS } from "@workos-inc/node";
-import { WORKOS_API_KEY, WORKOS_CLIENT_ID } from "$env/static/private";
+import { WORKOS_API_KEY, WORKOS_CLIENT_ID, ORIGIN } from "$env/static/private";
 import type { RequestHandler } from "./$types";
 
 const workos = new WorkOS(WORKOS_API_KEY);
@@ -9,7 +9,7 @@ export const GET: RequestHandler = async () => {
   const authorizationUrl = workos.userManagement.getAuthorizationUrl({
     provider: "authkit",
     clientId: WORKOS_CLIENT_ID,
-    redirectUri: "http://localhost:5173/auth/callback",
+    redirectUri: `${ORIGIN}/auth/callback`,
   });
 
   throw redirect(302, authorizationUrl);

@@ -11,45 +11,54 @@
     const templates = useQuery(api.templates.getAll, () => ({ query }));
 </script>
 
-<Breadcrumb.Root>
-    <Breadcrumb.List>
-        <Breadcrumb.Item>
-            <Breadcrumb.Link href="/">Home</Breadcrumb.Link>
-        </Breadcrumb.Item>
-        <Breadcrumb.Separator />
-        <Breadcrumb.Item>
-            <Breadcrumb.Page>Templates</Breadcrumb.Page>
-        </Breadcrumb.Item>
-    </Breadcrumb.List>
-</Breadcrumb.Root>
+<div class="py-4">
+    <Breadcrumb.Root>
+        <Breadcrumb.List>
+            <Breadcrumb.Item>
+                <Breadcrumb.Link href="/">Home</Breadcrumb.Link>
+            </Breadcrumb.Item>
+            <Breadcrumb.Separator />
+            <Breadcrumb.Item>
+                <Breadcrumb.Page>Templates</Breadcrumb.Page>
+            </Breadcrumb.Item>
+        </Breadcrumb.List>
+    </Breadcrumb.Root>
 
-<div class="flex flex-col gap-2 pt-2">
-    <Input
-        type="text"
-        bind:value={query}
-        placeholder="Search templates..."
-        class="border p-2 max-w-72"
-    />
-    {#if templates.data}
-        {#each templates.data as item, i (item)}
-            <a
-                href="/templates/{templates.data[i]._id}"
-                class="px-2 py-1 border items-center rounded-md"
-                ><span class="text-md">
-                    {templates.data[i].name}
-                </span>
-                <span class="text-sm">(by {templates.data[i].creatorName})</span
+    <div class="flex flex-col gap-2 pt-2">
+        <Input
+            type="text"
+            bind:value={query}
+            placeholder="Search templates..."
+            class="border p-2 max-w-72"
+        />
+        {#if templates.data}
+            {#each templates.data as item, i (item)}
+                <a
+                    href="/templates/{templates.data[i]._id}"
+                    class="px-2 py-1 border items-center rounded-md"
+                    ><span class="text-md">
+                        {templates.data[i].name}
+                    </span>
+                    <span class="text-sm"
+                        >(by {templates.data[i].creatorName})</span
+                    >
+                </a>
+            {/each}
+        {:else if templates.isLoading}
+            {#each Array(5) as _}
+                <div
+                    class="px-2 py-1 border rounded-md flex items-center gap-2"
                 >
-            </a>
-        {/each}
-    {:else if templates.isLoading}
-        {#each Array(5) as _}
-            <div class="px-2 py-1 border rounded-md flex items-center gap-2">
-                <div class="h-4 w-32 bg-muted animate-pulse rounded-md"></div>
-                <div class="h-3 w-20 bg-muted animate-pulse rounded-md"></div>
-            </div>
-        {/each}
-    {:else}
-        <p>No templates found.</p>
-    {/if}
+                    <div
+                        class="h-4 w-32 bg-muted animate-pulse rounded-md"
+                    ></div>
+                    <div
+                        class="h-3 w-20 bg-muted animate-pulse rounded-md"
+                    ></div>
+                </div>
+            {/each}
+        {:else}
+            <p>No templates found.</p>
+        {/if}
+    </div>
 </div>

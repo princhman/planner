@@ -7,15 +7,17 @@
     let effectively = $state();
 
     onMount(() => {
-        annotate(studyLess, {
-            type: "underline",
-            color: "#F5C542",
-        }).show();
+        document.fonts.ready.then(() => {
+            annotate(studyLess, {
+                type: "underline",
+                color: "#F5C542",
+            }).show();
 
-        annotate(effectively, {
-            type: "box",
-            color: "var(--primary)",
-        }).show();
+            annotate(effectively, {
+                type: "box",
+                color: "var(--primary)",
+            }).show();
+        });
     });
 </script>
 

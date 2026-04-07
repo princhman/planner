@@ -200,11 +200,21 @@ export const bulkAdd = mutation({
     const lastIdAtDepth = new Map<number, Id<"topics">>();
     const orderCounters = new Map<string, number>();
 
+    const existingMax = await ctx.db
+      .query("topics")
+      .withIndex("by_courses_parentId_order", (q) =>
+        q.eq("courseId", courseId).eq("parentId", undefined),
+      )
+      .order("desc")
+      .first();
+
+    let rootOffset = existingMax ? existingMax.order : 0;
+
     const getOrder = (parentId: Id<"topics"> | undefined): number => {
       const key = parentId ?? "__root__";
       const current = (orderCounters.get(key) ?? 0) + 1;
       orderCounters.set(key, current);
-      return current;
+      return parentId ? current : current + rootOffset;
     };
 
     for (const topic of topics) {
@@ -248,7 +258,11 @@ export const update = mutation({
     const user = await getAuthUserOrThrow(ctx);
     const affectedParentIds = new Set<Id<"topics">>();
     for (const u of updates) {
-      const oldParentId = (await ctx.db.get(u.id))?.parentId;
+      const existing = await ctx.db.get(u.id);
+      if (!existing || existing.userId !== user._id) {
+        throw new Error("Topic not found");
+      }
+      const oldParentId = existing.parentId;
       await ctx.db.patch(u.id, {
         parentId: u.parentId,
         order: u.order,
@@ -272,6 +286,10 @@ export const updateTitle = mutation({
   },
   handler: async (ctx, args) => {
     const user = await getAuthUserOrThrow(ctx);
+    const topic = await ctx.db.get(args.id);
+    if (!topic || topic.userId !== user._id) {
+      throw new Error("Topic not found");
+    }
     await ctx.db.patch(args.id, { title: args.title });
   },
 });
@@ -285,39 +303,45 @@ export const updateConfidence = mutation({
   handler: async (ctx, args) => {
     const user = await getAuthUserOrThrow(ctx);
     const topic = await ctx.db.get(args.id);
-    if (topic) {
-      if (args.backlogMode) {
-        await ctx.db.patch(args.id, {
-          confidence: args.confidence,
-          stability: initialStabilityToConfidence[args.confidence - 1],
-        });
-        await recomputeAncestorConfidence(ctx, topic.parentId);
-      } else {
+    if (!topic || topic.userId !== user._id) {
+      throw new Error("Topic not found");
+    }
+    if (args.backlogMode) {
+      await ctx.db.patch(args.id, {
+        confidence: args.confidence,
+        stability: initialStabilityToConfidence[args.confidence - 1],
+      });
+    } else {
+      const now = Date.now();
+      if (topic.lastRecallAt) {
         // WU - went up, SS - stayed the same, WD - wend down
         const WU_CONF = 0.35; // how much conf delta impacts new s
         const WU_R = 2; // how much good review time impacts new s
         const SS_R = 1.3; // how much good review impacts
         const SS_C = 1.15; // constant in staty the same
-        const WD_C = 1.1; // constant to decrease
+        const WD_C = 0.65; // constant to decrease
         const WD_R = 0.4; // how much review impacts
 
         const s = topic.stability;
         const confDelta = args.confidence - topic.confidence;
 
-        const now = Date.now();
-        const lastRecallAt = topic.lastRecallAt ?? 0;
-        const tMs = Math.max(0, now - lastRecallAt);
-        const t = Math.max(0.05, tMs / 86_400_000);
+        // calculate t since last review
+        const t = Math.max(
+          0.05,
+          Math.max(0, now - topic.lastRecallAt) / 86_400_000,
+        );
 
+        // calculate r - retriviability (0-1 score of how long since last review, kind of urgency)
         const r = Math.pow(1 + ((19 / 81) * t) / s, -0.5);
 
+        // calculate new s (n days to get 100% -> 90% of remembering)
         let newS: number;
         if (confDelta > 0) {
-          newS = s * (1 + WU_CONF * confDelta) * (1 + WU_R * (1 - r));
+          newS = s * (1 + WU_CONF * confDelta) * (1 + WU_R * (1 - r)); // reward good time review and good delta
         } else if (confDelta == 0) {
-          newS = s * (SS_C + SS_R * (1 - r));
+          newS = s * (SS_C + SS_R * (1 - r)); // increase a bit, depending on when it was reviewed
         } else {
-          newS = s * (WD_C + WD_R * r);
+          newS = s * (WD_C + WD_R * (1 - r)); // reducing s for next time
         }
 
         await ctx.db.patch(args.id, {
@@ -325,14 +349,99 @@ export const updateConfidence = mutation({
           lastRecallAt: now,
           stability: newS,
         });
-
-        await recomputeAncestorConfidence(ctx, topic.parentId);
+      } else {
+        await ctx.db.patch(args.id, {
+          confidence: args.confidence,
+          stability: initialStabilityToConfidence[args.confidence - 1],
+          lastRecallAt: now,
+        });
       }
     }
+    await recomputeAncestorConfidence(ctx, topic.parentId);
+  },
+});
+
+export const deleteTopic = mutation({
+  args: { id: v.id("topics") },
+  handler: async (ctx, args) => {
+    const user = await getAuthUserOrThrow(ctx);
+    const topic = await ctx.db.get(args.id);
+    if (!topic || topic.userId !== user._id) return;
+
+    await deleteDescendants(ctx, args.id);
+    await ctx.db.delete(args.id);
+    await verifyOrder(ctx, topic.courseId, topic.parentId);
+  },
+});
+
+export const addBelow = mutation({
+  args: { id: v.id("topics") },
+  handler: async (ctx, args) => {
+    const user = await getAuthUserOrThrow(ctx);
+    const topic = await ctx.db.get(args.id);
+    if (!topic || topic.userId !== user._id) return;
+
+    const sibilings = await ctx.db
+      .query("topics")
+      .withIndex("by_parentId", (q) => q.eq("parentId", topic.parentId))
+      .collect();
+
+    for (const sibling of sibilings) {
+      if (sibling.order > topic.order) {
+        await ctx.db.patch(sibling._id, { order: sibling.order + 1 });
+      }
+    }
+
+    return await ctx.db.insert("topics", {
+      userId: user._id,
+      courseId: topic.courseId,
+      order: topic.order + 1,
+      parentId: topic.parentId,
+      confidence: 1,
+      stability: 1,
+      lastRecallAt: undefined,
+      isLeaf: true,
+      title: `New Topic`,
+    });
   },
 });
 
 // helpers
+async function verifyOrder(
+  ctx: MutationCtx,
+  courseId: Id<"courses">,
+  parentId: Id<"topics"> | undefined,
+): Promise<void> {
+  const sibilings = await ctx.db
+    .query("topics")
+    .withIndex("by_courses_parentId_order", (q) =>
+      q.eq("courseId", courseId).eq("parentId", parentId),
+    )
+    .order("asc")
+    .collect();
+
+  for (let i = 0; i < sibilings.length; i++) {
+    const expectedOrder = i + 1;
+    if (sibilings[i].order !== expectedOrder) {
+      await ctx.db.patch(sibilings[i]._id, { order: expectedOrder });
+    }
+  }
+}
+async function deleteDescendants(
+  ctx: MutationCtx,
+  topicId: Id<"topics">,
+): Promise<void> {
+  const children = await ctx.db
+    .query("topics")
+    .withIndex("by_parentId", (q) => q.eq("parentId", topicId))
+    .collect();
+
+  for (const child of children) {
+    await deleteDescendants(ctx, child._id);
+    await ctx.db.delete(child._id);
+  }
+}
+
 async function recomputeAncestorConfidence(
   ctx: MutationCtx,
   parentId: Id<"topics"> | undefined,

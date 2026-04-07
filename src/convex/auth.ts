@@ -1,7 +1,7 @@
 import { AuthKit, type AuthFunctions } from "@convex-dev/workos-authkit";
 import { components, internal } from "./_generated/api";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
-import { DataModel } from "./_generated/dataModel";
+import type { DataModel } from "./_generated/dataModel";
 
 const authFunctions: AuthFunctions = internal.auth;
 

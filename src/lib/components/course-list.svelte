@@ -4,6 +4,9 @@
     import { useConvexClient, useQuery } from "convex-svelte";
     import Button from "./ui/button/button.svelte";
     import { Trash2 } from "lucide-svelte";
+    import type { ConfidenceCounts } from "./dnd/types";
+    import { confidenceBgColors } from "$lib/confidence";
+    import { cn } from "$lib/utils";
 
     const client = useConvexClient();
 
@@ -34,18 +37,49 @@
                 {/if}
             </div>
 
-            <div
-                class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 py-1"
-            >
-                <Button
-                    variant="outline"
-                    size="icon-sm"
-                    onclick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        deletecourse(course._id);
-                    }}><Trash2 class="text-red-500" /></Button
+            <div class="flex gap-2 items-center">
+                <div class="flex gap-1 items-center">
+                    {#each [5, 4, 3, 2, 1] as level (level)}
+                        {#if course.confidenceToCountMap[level as keyof ConfidenceCounts] > 0}
+                            <span class="text-white">
+                                {course.confidenceToCountMap[
+                                    level as keyof ConfidenceCounts
+                                ]}
+                            </span>
+                            <div
+                                class={cn(
+                                    confidenceBgColors[level - 1],
+                                    "w-2 h-2",
+                                )}
+                            ></div>
+                        {/if}
+                    {/each}
+                </div>
+                <!-- <span class="text-sm text-gray-500">({course.leafCount})</span> -->
+                <div class="flex h-3 w-35 overflow-hidden rounded-md border">
+                    {#each [5, 4, 3, 2, 1] as level (level)}
+                        {#if course.confidenceToCountMap[level as keyof ConfidenceCounts] > 0}
+                            <div
+                                class={confidenceBgColors[level - 1]}
+                                style={`flex: ${course.confidenceToCountMap[level as keyof ConfidenceCounts]} 1 0%`}
+                                title={`Level ${level}: ${course.confidenceToCountMap[level as keyof ConfidenceCounts]}`}
+                            ></div>
+                        {/if}
+                    {/each}
+                </div>
+                <div
+                    class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 py-1"
                 >
+                    <Button
+                        variant="outline"
+                        size="icon-sm"
+                        onclick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            deletecourse(course._id);
+                        }}><Trash2 class="text-red-500" /></Button
+                    >
+                </div>
             </div>
         </a>
     {/each}

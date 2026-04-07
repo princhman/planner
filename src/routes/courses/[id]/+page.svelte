@@ -13,6 +13,7 @@
         NotepadTextDashed,
         Pencil,
         Plus,
+        Save,
     } from "lucide-svelte";
     import { confidenceLabels, confidenceBgColors } from "$lib/confidence";
     import * as Breadcrumb from "$lib/components/ui/breadcrumb/index.js";
@@ -131,7 +132,7 @@
 </script>
 
 {#if course}
-    <div class="flex flex-col gap-2">
+    <div class="flex flex-col gap-2 py-4">
         <div class="flex justify-between items-center">
             <div class="gap-1 flex">
                 <Breadcrumb.Root>
@@ -183,7 +184,7 @@
                     </Button>
                     <Button
                         variant={isEditMode ? "default" : "outline"}
-                        size="icon-sm"
+                        size={!isEditMode ? "icon-sm" : "sm"}
                         onclick={() => {
                             if (!isEditMode) initEditFields();
                             isEditMode = !isEditMode;
@@ -193,7 +194,12 @@
                             }
                         }}
                     >
-                        <Pencil />
+                        {#if !isEditMode}
+                            <Pencil />
+                        {:else}
+                            <Save />
+                            Save
+                        {/if}
                     </Button>
                 {/if}
                 {#if course.data && !isEditMode && !isBacklogMode}

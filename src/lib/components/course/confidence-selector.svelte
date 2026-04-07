@@ -3,19 +3,18 @@
     import type { ConfidenceCounts, ConfidenceLevel } from "../dnd/types";
     import { cn } from "$lib/utils";
     import { confidenceLabels, confidenceBgColors } from "$lib/confidence";
+    import { toast } from "svelte-sonner";
 
     interface Props {
         value: number;
         onChange: (value: number) => void;
         readOnly: boolean;
         confidenceCounts: ConfidenceCounts;
+        topicName: string;
     }
 
-    let { value, onChange, readOnly, confidenceCounts }: Props = $props();
-
-    const total = $derived(
-        Object.values(confidenceCounts).reduce((a, b) => a + b, 0),
-    );
+    let { value, onChange, readOnly, confidenceCounts, topicName }: Props =
+        $props();
 </script>
 
 {#if readOnly}
@@ -55,7 +54,12 @@
                         ? confidenceBgColors[value - 1]
                         : "bg-gray-400",
                 )}
-                onclick={() => onChange(item)}
+                onclick={() => {
+                    onChange(item);
+                    toast.info(
+                        `"${topicName}" updated to "${confidenceLabels[item - 1]}"`,
+                    );
+                }}
                 aria-label={confidenceLabels[i - 1]}
             ></button>
         {/each}
