@@ -2,10 +2,6 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  // Generated with AI
-  // Users table now maps WorkOS users to Convex records.
-  // `workosId` is the user's unique ID from WorkOS (the "sub" claim in the JWT).
-  // We keep this table so courses/topics can still reference userId via v.id("users").
   users: defineTable({
     workosId: v.optional(v.string()), // optional so old records without it still pass validation
     name: v.optional(v.string()),
