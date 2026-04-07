@@ -491,4 +491,53 @@ export declare const components: {
       >;
     };
   };
+  workOSAuthKit: {
+    backfill: {
+      startBackfill: FunctionReference<
+        "mutation",
+        "internal",
+        { apiKey: string; logLevel?: "DEBUG"; onEventHandle?: string },
+        null
+      >;
+    };
+    lib: {
+      getAuthUser: FunctionReference<
+        "query",
+        "internal",
+        { id: string },
+        {
+          createdAt: string;
+          email: string;
+          emailVerified: boolean;
+          externalId?: null | string;
+          firstName?: null | string;
+          id: string;
+          lastName?: null | string;
+          lastSignInAt?: null | string;
+          locale?: null | string;
+          metadata: Record<string, any>;
+          profilePictureUrl?: null | string;
+          updatedAt: string;
+        } | null
+      >;
+      onWebhookEvent: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          apiKey: string;
+          event: {
+            context?: Record<string, any>;
+            createdAt: string;
+            data: Record<string, any>;
+            event: string;
+            id: string;
+          };
+          eventTypes?: Array<string>;
+          logLevel?: "DEBUG";
+          onEventHandle?: string;
+        },
+        null
+      >;
+    };
+  };
 };

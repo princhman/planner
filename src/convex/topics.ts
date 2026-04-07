@@ -245,7 +245,7 @@ export const update = mutation({
     ),
   },
   handler: async (ctx, { updates }) => {
-    await getAuthUserOrThrow(ctx);
+    const user = await getAuthUserOrThrow(ctx);
     const affectedParentIds = new Set<Id<"topics">>();
     for (const u of updates) {
       const oldParentId = (await ctx.db.get(u.id))?.parentId;
@@ -271,7 +271,7 @@ export const updateTitle = mutation({
     title: v.string(),
   },
   handler: async (ctx, args) => {
-    await getAuthUserOrThrow(ctx);
+    const user = await getAuthUserOrThrow(ctx);
     await ctx.db.patch(args.id, { title: args.title });
   },
 });
@@ -283,7 +283,7 @@ export const updateConfidence = mutation({
     backlogMode: v.boolean(),
   },
   handler: async (ctx, args) => {
-    await getAuthUserOrThrow(ctx);
+    const user = await getAuthUserOrThrow(ctx);
     const topic = await ctx.db.get(args.id);
     if (topic) {
       if (args.backlogMode) {

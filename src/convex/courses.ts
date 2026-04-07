@@ -7,7 +7,6 @@ import { getAuthUser, getAuthUserOrThrow } from "./auth.js";
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    // getAuthUser reads the JWT and finds the user — no args needed
     const user = await getAuthUser(ctx);
     if (!user) return [];
     return await ctx.db
