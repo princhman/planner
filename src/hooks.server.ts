@@ -3,31 +3,85 @@
 // Its job: read the WorkOS JWT from the cookie, decode it,
 // and put the user info on `event.locals` so all pages can access it.
 //
+// If the access token is expired but a refresh token exists,
+// it silently refreshes the token so the user stays logged in.
+//
 // Note: We decode (not verify) the JWT here. Signature verification
 // happens on the Convex side via auth.config.ts + JWKS. This hook
 // only extracts claims for UI convenience — a forged token would
 // show the UI but all Convex queries/mutations would reject it.
 
 import type { Handle } from "@sveltejs/kit";
+import { WorkOS } from "@workos-inc/node";
+import { WORKOS_API_KEY, WORKOS_CLIENT_ID, ORIGIN } from "$env/static/private";
+
+const workos = new WorkOS(WORKOS_API_KEY);
+const isProduction = ORIGIN.startsWith("https://");
+
+function decodeAndCheck(token: string): { payload: Record<string, string>; expired: boolean } | null {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    const expired = payload.exp * 1000 < Date.now() + 30_000;
+    return { payload, expired };
+  } catch {
+    return null;
+  }
+}
+
+function extractUser(payload: Record<string, string>) {
+  return {
+    id: payload.sub,
+    email: payload.email,
+    name:
+      payload.first_name && payload.last_name
+        ? `${payload.first_name} ${payload.last_name}`
+        : payload.first_name || null,
+  };
+}
 
 export const handle: Handle = async ({ event, resolve }) => {
-  const token = event.cookies.get("workos_access_token");
+  let token = event.cookies.get("workos_access_token") ?? null;
+  const refreshToken = event.cookies.get("workos_refresh_token") ?? null;
+
+  // Try to refresh if the access token is missing or expired
+  if ((!token || decodeAndCheck(token)?.expired) && refreshToken) {
+    try {
+      const result = await workos.userManagement.authenticateWithRefreshToken({
+        clientId: WORKOS_CLIENT_ID,
+        refreshToken,
+      });
+
+      token = result.accessToken;
+
+      event.cookies.set("workos_access_token", result.accessToken, {
+        path: "/",
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: "lax",
+        maxAge: 60 * 60,
+      });
+
+      event.cookies.set("workos_refresh_token", result.refreshToken, {
+        path: "/",
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 30,
+      });
+    } catch {
+      // Refresh failed — clear everything
+      event.cookies.delete("workos_access_token", { path: "/" });
+      event.cookies.delete("workos_refresh_token", { path: "/" });
+      token = null;
+    }
+  }
 
   if (token) {
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-
-      event.locals.user = {
-        id: payload.sub,
-        email: payload.email,
-        name:
-          payload.first_name && payload.last_name
-            ? `${payload.first_name} ${payload.last_name}`
-            : payload.first_name || null,
-      };
-
+    const decoded = decodeAndCheck(token);
+    if (decoded && !decoded.expired) {
+      event.locals.user = extractUser(decoded.payload);
       event.locals.token = token;
-    } catch {
+    } else {
       event.locals.user = null;
       event.locals.token = null;
     }

@@ -1,4 +1,5 @@
 <script lang="ts">
+    // Generated with AI
     // Two jobs: (1) set up Convex, (2) tell Convex about the user's auth token.
 
     import "./layout.css";
@@ -13,15 +14,36 @@
 
     const client = useConvexClient();
 
-    // $effect runs whenever data.token changes (login or logout).
-    // After logout, data.token becomes null → we clear Convex auth.
-    // After login, data.token has the JWT → we set it on Convex.
+    // fetchToken is called by the Convex client whenever it needs a token —
+    // both on initial connect and periodically to refresh before expiry.
+    // It hits our server endpoint which can use the httpOnly refresh token
+    // cookie to get a fresh access token from WorkOS.
+    async function fetchToken(): Promise<string | null> {
+        try {
+            const res = await fetch("/auth/token");
+            const { token } = await res.json();
+            return token ?? null;
+        } catch {
+            return null;
+        }
+    }
+
+    // Set auth once. The Convex client manages the lifecycle — it calls
+    // fetchToken when needed (initial auth + scheduled refreshes).
+    // On logout (data.user goes away), we pass a null-returning function
+    // to tell Convex there's no authenticated user.
+    let authSet = false;
     $effect(() => {
-        if (data.token) {
-            client.setAuth(() => Promise.resolve(data.token));
+        if (data.user) {
+            if (!authSet) {
+                client.setAuth(fetchToken);
+                authSet = true;
+            }
         } else {
-            // Returning null tells Convex "no user is logged in"
-            client.setAuth(() => Promise.resolve(null));
+            if (authSet) {
+                client.setAuth(() => Promise.resolve(null));
+                authSet = false;
+            }
         }
     });
 
