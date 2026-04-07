@@ -1,7 +1,6 @@
 <script lang="ts">
     import { api } from "$convex/_generated/api";
     import type { Id } from "$convex/_generated/dataModel";
-    import { authState } from "$lib/stores/auth-store.svelte";
     import { useConvexClient, useQuery } from "convex-svelte";
     import Button from "./ui/button/button.svelte";
     import { Trash2 } from "lucide-svelte";
@@ -11,15 +10,10 @@
 
     const client = useConvexClient();
 
-    const userId = $derived(authState.userId);
-    const courses = useQuery(api.courses.list, () =>
-        userId ? { userId } : "skip",
-    );
+    const courses = useQuery(api.courses.list, {});
 
     const deletecourse = (id: Id<"courses">) => {
-        if (userId) {
-            client.mutation(api.courses.remove, { id, userId });
-        }
+        client.mutation(api.courses.remove, { id });
     };
 
     const daysUntil = (examDate: string) => {

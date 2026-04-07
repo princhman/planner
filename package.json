@@ -35,11 +35,12 @@
     "vite": "^7.3.1"
   },
   "dependencies": {
-    "@convex-dev/stripe": "^0.1.4",
+    "@convex-dev/workos-authkit": "^0.2.2",
     "@dnd-kit/dom": "^0.3.2",
     "@dnd-kit/helpers": "^0.3.2",
     "@dnd-kit/svelte": "^0.3.2",
     "@sveltejs/adapter-vercel": "^6.3.3",
+    "@workos-inc/node": "^8.12.0",
     "bits-ui": "^2.16.3",
     "convex": "^1.34.0",
     "convex-svelte": "^0.0.12",

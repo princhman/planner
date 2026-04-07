@@ -3,10 +3,13 @@ import { v } from "convex/values";
 
 export default defineSchema({
   users: defineTable({
+    workosId: v.optional(v.string()), // optional so old records without it still pass validation
     name: v.optional(v.string()),
     email: v.string(),
-    passwordHash: v.string(),
-  }).index("by_email", ["email"]),
+    passwordHash: v.optional(v.string()), // legacy — kept so old records don't break, will be empty for new users
+  })
+    .index("by_workos_id", ["workosId"])
+    .index("by_email", ["email"]),
 
   courses: defineTable({
     userId: v.id("users"),

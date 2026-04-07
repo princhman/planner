@@ -1,15 +1,17 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server.js";
+import { getAuthUser, getAuthUserOrThrow } from "./auth.js";
 
 // ── Queries ──
 
 export const list = query({
-  args: { userId: v.optional(v.id("users")) },
-  handler: async (ctx, args) => {
-    if (!args.userId) return [];
+  args: {},
+  handler: async (ctx) => {
+    const user = await getAuthUser(ctx);
+    if (!user) return [];
     const course = await ctx.db
       .query("courses")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId!))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
     return Promise.all(
@@ -18,7 +20,7 @@ export const list = query({
           .query("topics")
           .withIndex("by_user_course_leaf_confidence", (q) =>
             q
-              .eq("userId", args.userId!)
+              .eq("userId", user._id)
               .eq("courseId", course._id)
               .eq("isLeaf", true),
           )
@@ -42,10 +44,12 @@ export const list = query({
 });
 
 export const get = query({
-  args: { id: v.id("courses"), userId: v.id("users") },
+  args: { id: v.id("courses") },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) return null;
     const course = await ctx.db.get(args.id);
-    if (!course || course.userId !== args.userId) return null;
+    if (!course || course.userId !== user._id) return null;
     return course;
   },
 });
@@ -54,13 +58,13 @@ export const get = query({
 
 export const create = mutation({
   args: {
-    userId: v.id("users"),
     name: v.string(),
     examDate: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUserOrThrow(ctx);
     return await ctx.db.insert("courses", {
-      userId: args.userId,
+      userId: user._id,
       name: args.name,
       examDate: args.examDate,
     });
@@ -70,14 +74,14 @@ export const create = mutation({
 export const update = mutation({
   args: {
     id: v.id("courses"),
-    userId: v.id("users"),
     name: v.optional(v.string()),
     examDate: v.optional(v.string()),
     defaultSessionMinutes: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUserOrThrow(ctx);
     const existing = await ctx.db.get(args.id);
-    if (!existing || existing.userId !== args.userId) {
+    if (!existing || existing.userId !== user._id) {
       throw new Error("course not found");
     }
     const updates: Record<string, unknown> = { updatedAt: Date.now() };
@@ -90,23 +94,22 @@ export const update = mutation({
 });
 
 export const remove = mutation({
-  args: { id: v.id("courses"), userId: v.id("users") },
+  args: { id: v.id("courses") },
   handler: async (ctx, args) => {
+    const user = await getAuthUserOrThrow(ctx);
     const existing = await ctx.db.get(args.id);
-    if (!existing || existing.userId !== args.userId) {
+    if (!existing || existing.userId !== user._id) {
       throw new Error("Course not found");
     }
-    // Delete related topics
     const topics = await ctx.db
       .query("topics")
       .withIndex("by_user_course", (q) =>
-        q.eq("userId", args.userId).eq("courseId", args.id),
+        q.eq("userId", user._id).eq("courseId", args.id),
       )
       .collect();
     for (const topic of topics) {
       await ctx.db.delete(topic._id);
     }
-    // Delete the course
     await ctx.db.delete(args.id);
   },
 });

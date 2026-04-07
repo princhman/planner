@@ -1,22 +1,21 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel.js";
-import {
-  internalMutation,
-  mutation,
-  MutationCtx,
-  query,
-} from "./_generated/server.js";
+import type { MutationCtx } from "./_generated/server.js";
+import { mutation, query } from "./_generated/server.js";
+import { getAuthUser, getAuthUserOrThrow } from "./auth.js";
 
 const initialStabilityToConfidence = [1, 3, 7, 12, 20]; // subject to be updated
 const REVIEW_THRESHOLD = 0.9;
 
 export const listByCourse = query({
-  args: { courseId: v.id("courses"), userId: v.id("users") },
+  args: { courseId: v.id("courses") },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) return [];
     const topics = await ctx.db
       .query("topics")
       .withIndex("by_user_course", (q) =>
-        q.eq("userId", args.userId).eq("courseId", args.courseId),
+        q.eq("userId", user._id).eq("courseId", args.courseId),
       )
       .collect();
     const now = Date.now();
@@ -42,13 +41,14 @@ export const listByCourse = query({
 
 export const recomendations = query({
   args: {
-    userId: v.id("users"),
     includeNotStarted: v.boolean(),
     courseId: v.optional(v.id("courses")),
     limit: v.optional(v.number()),
     applyThresholds: v.boolean(),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUser(ctx);
+    if (!user) return { items: [], nextReviewMs: null };
     const courseId = args.courseId;
     const now = Date.now();
     const dayMs = 86_400_000;
@@ -60,7 +60,7 @@ export const recomendations = query({
         .query("topics")
         .withIndex("by_user_course_leaf_confidence", (q) =>
           q
-            .eq("userId", args.userId)
+            .eq("userId", user._id)
             .eq("courseId", courseId)
             .eq("isLeaf", true)
             .gt("confidence", args.includeNotStarted ? 0 : 1),
@@ -71,7 +71,7 @@ export const recomendations = query({
         .query("topics")
         .withIndex("by_user_leaf_confidence", (q) =>
           q
-            .eq("userId", args.userId)
+            .eq("userId", user._id)
             .eq("isLeaf", true)
             .gt("confidence", args.includeNotStarted ? 0 : 1),
         )
@@ -120,14 +120,10 @@ export const recomendations = query({
       }),
     );
 
-    // not sure i really need it, maybe remove it later
-    // compute next review time from topics that are currently above threshold
-    // Uses the retrievability formula inverted: solve r = threshold for t
-    // r = (1 + (19/81) * (t/s))^(-0.5) => t = s * (81/19) * (threshold^(-2) - 1)
     let nextReviewMs: number | null = null;
     if (args.applyThresholds && !needsNext) {
       for (const item of allComputed) {
-        if (item.needsReview) continue; // already needs review
+        if (item.needsReview) continue;
         const s = Math.max(item.topic.stability ?? 1, 0.05);
         const tDaysUntilThreshold =
           s * (81 / 19) * (Math.pow(REVIEW_THRESHOLD, -2) - 1);
@@ -156,13 +152,12 @@ export const recomendations = query({
 
 export const add = mutation({
   args: {
-    userId: v.id("users"),
     courseId: v.id("courses"),
     title: v.string(),
     parentId: v.optional(v.id("topics")),
   },
   handler: async (ctx, args) => {
-    // order starts at 1
+    const user = await getAuthUserOrThrow(ctx);
     const topicWithMaxOrder = await ctx.db
       .query("topics")
       .withIndex("by_courses_parentId_order", (q) =>
@@ -173,14 +168,14 @@ export const add = mutation({
     const order = topicWithMaxOrder ? topicWithMaxOrder.order + 1 : 1;
 
     const id = await ctx.db.insert("topics", {
-      userId: args.userId,
+      userId: user._id,
       courseId: args.courseId,
       order: order,
       title: args.title,
       parentId: args.parentId,
       confidence: 1,
       lastRecallAt: undefined,
-      stability: initialStabilityToConfidence[0], // need proper stability assigning
+      stability: initialStabilityToConfidence[0],
       isLeaf: true,
     });
 
@@ -192,7 +187,6 @@ export const add = mutation({
 
 export const bulkAdd = mutation({
   args: {
-    userId: v.id("users"),
     courseId: v.id("courses"),
     topics: v.array(
       v.object({
@@ -201,8 +195,8 @@ export const bulkAdd = mutation({
       }),
     ),
   },
-  handler: async (ctx, { userId, courseId, topics }) => {
-    // track last inserted id per depth level, and running order per (depth, parentId)
+  handler: async (ctx, { courseId, topics }) => {
+    const user = await getAuthUserOrThrow(ctx);
     const lastIdAtDepth = new Map<number, Id<"topics">>();
     const orderCounters = new Map<string, number>();
 
@@ -227,14 +221,14 @@ export const bulkAdd = mutation({
       const parentId =
         topic.depth > 0 ? lastIdAtDepth.get(topic.depth - 1) : undefined;
 
-      if (topic.depth > 0 && !parentId) continue; // skip orphans
+      if (topic.depth > 0 && !parentId) continue;
 
       if (parentId) {
         await ctx.db.patch(parentId, { isLeaf: false });
       }
 
       const id = await ctx.db.insert("topics", {
-        userId,
+        userId: user._id,
         courseId,
         title: topic.title,
         order: getOrder(parentId),
@@ -261,9 +255,14 @@ export const update = mutation({
     ),
   },
   handler: async (ctx, { updates }) => {
+    const user = await getAuthUserOrThrow(ctx);
     const affectedParentIds = new Set<Id<"topics">>();
     for (const u of updates) {
-      const oldParentId = (await ctx.db.get(u.id))?.parentId;
+      const existing = await ctx.db.get(u.id);
+      if (!existing || existing.userId !== user._id) {
+        throw new Error("Topic not found");
+      }
+      const oldParentId = existing.parentId;
       await ctx.db.patch(u.id, {
         parentId: u.parentId,
         order: u.order,
@@ -286,6 +285,11 @@ export const updateTitle = mutation({
     title: v.string(),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUserOrThrow(ctx);
+    const topic = await ctx.db.get(args.id);
+    if (!topic || topic.userId !== user._id) {
+      throw new Error("Topic not found");
+    }
     await ctx.db.patch(args.id, { title: args.title });
   },
 });
@@ -297,72 +301,72 @@ export const updateConfidence = mutation({
     backlogMode: v.boolean(),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthUserOrThrow(ctx);
     const topic = await ctx.db.get(args.id);
-    if (topic) {
-      // if backlogMode -> confidence update, stability reset, lastRecall is the same
-      if (args.backlogMode) {
+    if (!topic || topic.userId !== user._id) {
+      throw new Error("Topic not found");
+    }
+    if (args.backlogMode) {
+      await ctx.db.patch(args.id, {
+        confidence: args.confidence,
+        stability: initialStabilityToConfidence[args.confidence - 1],
+      });
+    } else {
+      const now = Date.now();
+      if (topic.lastRecallAt) {
+        // WU - went up, SS - stayed the same, WD - wend down
+        const WU_CONF = 0.35; // how much conf delta impacts new s
+        const WU_R = 2; // how much good review time impacts new s
+        const SS_R = 1.3; // how much good review impacts
+        const SS_C = 1.15; // constant in staty the same
+        const WD_C = 0.65; // constant to decrease
+        const WD_R = 0.4; // how much review impacts
+
+        const s = topic.stability;
+        const confDelta = args.confidence - topic.confidence;
+
+        // calculate t since last review
+        const t = Math.max(
+          0.05,
+          Math.max(0, now - topic.lastRecallAt) / 86_400_000,
+        );
+
+        // calculate r - retriviability (0-1 score of how long since last review, kind of urgency)
+        const r = Math.pow(1 + ((19 / 81) * t) / s, -0.5);
+
+        // calculate new s (n days to get 100% -> 90% of remembering)
+        let newS: number;
+        if (confDelta > 0) {
+          newS = s * (1 + WU_CONF * confDelta) * (1 + WU_R * (1 - r)); // reward good time review and good delta
+        } else if (confDelta == 0) {
+          newS = s * (SS_C + SS_R * (1 - r)); // increase a bit, depending on when it was reviewed
+        } else {
+          newS = s * (WD_C + WD_R * (1 - r)); // reducing s for next time
+        }
+
+        await ctx.db.patch(args.id, {
+          confidence: args.confidence,
+          lastRecallAt: now,
+          stability: newS,
+        });
+      } else {
         await ctx.db.patch(args.id, {
           confidence: args.confidence,
           stability: initialStabilityToConfidence[args.confidence - 1],
+          lastRecallAt: now,
         });
-      } else {
-        const now = Date.now();
-        if (topic.lastRecallAt) {
-          // WU - went up, SS - stayed the same, WD - wend down
-          const WU_CONF = 0.35; // how much conf delta impacts new s
-          const WU_R = 2; // how much good review time impacts new s
-          const SS_R = 1.3; // how much good review impacts
-          const SS_C = 1.15; // constant in staty the same
-          const WD_C = 0.65; // constant to decrease
-          const WD_R = 0.4; // how much review impacts
-
-          const s = topic.stability;
-          const confDelta = args.confidence - topic.confidence;
-
-          // calculate t since last review
-          const t = Math.max(
-            0.05,
-            Math.max(0, now - topic.lastRecallAt) / 86_400_000,
-          );
-
-          // calculate r - retriviability (0-1 score of how long since last review, kind of urgency)
-          const r = Math.pow(1 + ((19 / 81) * t) / s, -0.5);
-
-          // calculate new s (n days to get 100% -> 90% of remembering)
-          let newS: number;
-          if (confDelta > 0) {
-            newS = s * (1 + WU_CONF * confDelta) * (1 + WU_R * (1 - r)); // reward good time review and good delta
-          } else if (confDelta == 0) {
-            newS = s * (SS_C + SS_R * (1 - r)); // increase a bit, depending on when it was reviewed
-          } else {
-            newS = s * (WD_C + WD_R * (1 - r)); // reducing s for next time
-          }
-
-          await ctx.db.patch(args.id, {
-            confidence: args.confidence,
-            lastRecallAt: now,
-            stability: newS,
-          });
-        } else {
-          await ctx.db.patch(args.id, {
-            confidence: args.confidence,
-            stability: initialStabilityToConfidence[args.confidence - 1],
-            lastRecallAt: now,
-          });
-        }
-
-        // recompute for ancestors
       }
-      await recomputeAncestorConfidence(ctx, topic.parentId);
     }
+    await recomputeAncestorConfidence(ctx, topic.parentId);
   },
 });
 
 export const deleteTopic = mutation({
   args: { id: v.id("topics") },
   handler: async (ctx, args) => {
+    const user = await getAuthUserOrThrow(ctx);
     const topic = await ctx.db.get(args.id);
-    if (!topic) return;
+    if (!topic || topic.userId !== user._id) return;
 
     await deleteDescendants(ctx, args.id);
     await ctx.db.delete(args.id);
@@ -373,8 +377,9 @@ export const deleteTopic = mutation({
 export const addBelow = mutation({
   args: { id: v.id("topics") },
   handler: async (ctx, args) => {
+    const user = await getAuthUserOrThrow(ctx);
     const topic = await ctx.db.get(args.id);
-    if (!topic) return;
+    if (!topic || topic.userId !== user._id) return;
 
     const sibilings = await ctx.db
       .query("topics")
@@ -388,7 +393,7 @@ export const addBelow = mutation({
     }
 
     return await ctx.db.insert("topics", {
-      userId: topic.userId,
+      userId: user._id,
       courseId: topic.courseId,
       order: topic.order + 1,
       parentId: topic.parentId,
@@ -489,7 +494,6 @@ function computeExamUrgency(
 
   const daysLeft = Math.max(0, (examMs - nowMs) / 86_400_000);
 
-  // 90 days -> 1, 0 days -> 2 (simple linear urgency boost)
   const eu = 1 + Math.max(0, (90 - daysLeft) / 90);
   return Math.min(2, Math.max(1, eu));
 }

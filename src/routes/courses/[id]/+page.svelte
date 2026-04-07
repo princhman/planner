@@ -3,7 +3,6 @@
     import type { PageProps } from "./$types";
     import { api } from "$convex/_generated/api";
     import type { Id } from "$convex/_generated/dataModel";
-    import { authState } from "$lib/stores/auth-store.svelte";
     import Input from "$lib/components/ui/input/input.svelte";
     import Button from "$lib/components/ui/button/button.svelte";
     import type { Topic } from "$lib/components/dnd/types";
@@ -33,7 +32,6 @@
     import CreateTemplate from "$lib/components/course/create-template.svelte";
 
     let { params }: PageProps = $props();
-    let userId = $derived(authState.userId);
 
     const client = useConvexClient();
     let isBacklogMode = $state(false);
@@ -53,7 +51,6 @@
 
     async function saveCourse() {
         if (
-            !userId ||
             !course.data ||
             (course.data?.examDate == editExamDate?.toString() &&
                 course.data?.name == editName)
@@ -61,7 +58,6 @@
             return;
         await client.mutation(api.courses.update, {
             id: params.id as Id<"courses">,
-            userId,
             name: editName,
             examDate: editExamDate?.toString() ?? "",
         });
@@ -69,9 +65,9 @@
         showAddTopic = false;
     }
 
-    const course = useQuery(api.courses.get, () =>
-        userId ? { id: params.id as Id<"courses">, userId } : "skip",
-    );
+    const course = useQuery(api.courses.get, () => ({
+        id: params.id as Id<"courses">,
+    }));
 
     const examLabel = $derived.by(() => {
         const raw = course.data?.examDate;
@@ -84,9 +80,9 @@
         if (days === 1) return "tomorrow";
         return `in ${days}d`;
     });
-    const topics = useQuery(api.topics.listByCourse, () =>
-        userId ? { courseId: params.id as Id<"courses">, userId } : "skip",
-    );
+    const topics = useQuery(api.topics.listByCourse, () => ({
+        courseId: params.id as Id<"courses">,
+    }));
 
     type TopicUpdate = {
         id: Id<"topics">;
@@ -94,8 +90,6 @@
         order: number;
     };
     const updateTopics = (changed: Topic[]) => {
-        if (!userId) return;
-
         const updates: TopicUpdate[] = changed.map((t) => ({
             id: t.id,
             parentId: t.parentId,
@@ -103,7 +97,6 @@
         }));
         const queryArgs = {
             courseId: params.id as Id<"courses">,
-            userId,
         };
         client.mutation(
             api.topics.update,

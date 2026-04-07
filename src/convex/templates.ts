@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
+import { getAuthUser, getAuthUserOrThrow } from "./auth.js";
 
 export const getAll = query({
   args: { query: v.optional(v.string()) },
@@ -41,8 +42,13 @@ export const get = query({
     if (!template) {
       return null;
     }
-    const user = await ctx.db.get(template.creatorId);
-    return { ...template, creatorName: user ? user.name : "Unknown" };
+    const currentUser = await getAuthUser(ctx);
+    const creator = await ctx.db.get(template.creatorId);
+    return {
+      ...template,
+      creatorName: creator ? creator.name : "Unknown",
+      isCreator: currentUser?._id === template.creatorId,
+    };
   },
 });
 
@@ -59,20 +65,21 @@ export const getTopics = query({
 export const createFromCourse = mutation({
   args: { courseId: v.id("courses"), name: v.optional(v.string()) },
   handler: async (ctx, { courseId, name }) => {
+    const user = await getAuthUserOrThrow(ctx);
     const course = await ctx.db.get(courseId);
-    if (!course) {
+    if (!course || course.userId !== user._id) {
       throw new Error("Course not found");
     }
     const templateId = await ctx.db.insert("templates", {
       name: name ?? course.name,
-      creatorId: course.userId,
+      creatorId: user._id,
       sourceCourseId: course._id,
     });
 
     const topics = await ctx.db
       .query("topics")
       .withIndex("by_user_course", (q) =>
-        q.eq("userId", course.userId).eq("courseId", courseId),
+        q.eq("userId", user._id).eq("courseId", courseId),
       )
       .collect();
     const templateIdMap = new Map<Id<"topics">, Id<"templateTopics">>();
@@ -95,7 +102,7 @@ export const createFromCourse = mutation({
         });
         templateIdMap.set(topic._id, topicId);
       }
-      if (stillRemaining.length === remaining.length) break; // no progress, avoid infinite loop
+      if (stillRemaining.length === remaining.length) break;
       remaining = stillRemaining;
     }
 
@@ -108,6 +115,11 @@ export const deleteTemplate = mutation({
     templateId: v.id("templates"),
   },
   handler: async (ctx, { templateId }) => {
+    const user = await getAuthUserOrThrow(ctx);
+    const template = await ctx.db.get(templateId);
+    if (!template || template.creatorId !== user._id) {
+      throw new Error("Template not found");
+    }
     await ctx.db.delete(templateId);
   },
 });
@@ -115,9 +127,9 @@ export const deleteTemplate = mutation({
 export const createCourseFromTemplate = mutation({
   args: {
     templateId: v.id("templates"),
-    userId: v.id("users"),
   },
-  handler: async (ctx, { templateId, userId }) => {
+  handler: async (ctx, { templateId }) => {
+    const user = await getAuthUserOrThrow(ctx);
     const template = await ctx.db.get(templateId);
     if (!template) {
       throw new Error("Template not found");
@@ -130,7 +142,7 @@ export const createCourseFromTemplate = mutation({
 
     const courseId = await ctx.db.insert("courses", {
       name: template.name,
-      userId,
+      userId: user._id,
       templateId,
     });
 
@@ -147,7 +159,7 @@ export const createCourseFromTemplate = mutation({
         }
         const topicId = await ctx.db.insert("topics", {
           courseId,
-          userId,
+          userId: user._id,
           title: templateTopic.title,
           parentId: templateTopic.parentId
             ? topicIdMap.get(templateTopic.parentId)
@@ -168,7 +180,7 @@ export const createCourseFromTemplate = mutation({
           }
         }
       }
-      if (stillRemaining.length === remaining.length) break; // no progress, avoid infinite loop
+      if (stillRemaining.length === remaining.length) break;
       remaining = stillRemaining;
     }
 

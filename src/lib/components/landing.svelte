@@ -38,7 +38,7 @@
         >
     </span>
     <div class="pt-4">
-        <Button href="/auth" class="px-8 py-2 text-xl"
+        <Button href="/auth/login" class="px-8 py-2 text-xl"
             >Get started for free</Button
         >
     </div>
@@ -62,7 +62,7 @@
             >
         </div>
         <div class="pt-4">
-            <Button href="/auth" class="px-8 py-2 text-xl"
+            <Button href="/auth/login" class="px-8 py-2 text-xl"
                 >Start planning</Button
             >
         </div>

@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as courses from "../courses.js";
+import type * as http from "../http.js";
 import type * as templates from "../templates.js";
 import type * as topics from "../topics.js";
 
@@ -22,6 +23,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   courses: typeof courses;
+  http: typeof http;
   templates: typeof templates;
   topics: typeof topics;
 }>;
@@ -52,4 +54,54 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  workOSAuthKit: {
+    backfill: {
+      startBackfill: FunctionReference<
+        "mutation",
+        "internal",
+        { apiKey: string; logLevel?: "DEBUG"; onEventHandle?: string },
+        null
+      >;
+    };
+    lib: {
+      getAuthUser: FunctionReference<
+        "query",
+        "internal",
+        { id: string },
+        {
+          createdAt: string;
+          email: string;
+          emailVerified: boolean;
+          externalId?: null | string;
+          firstName?: null | string;
+          id: string;
+          lastName?: null | string;
+          lastSignInAt?: null | string;
+          locale?: null | string;
+          metadata: Record<string, any>;
+          profilePictureUrl?: null | string;
+          updatedAt: string;
+        } | null
+      >;
+      onWebhookEvent: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          apiKey: string;
+          event: {
+            context?: Record<string, any>;
+            createdAt: string;
+            data: Record<string, any>;
+            event: string;
+            id: string;
+          };
+          eventTypes?: Array<string>;
+          logLevel?: "DEBUG";
+          onEventHandle?: string;
+        },
+        null
+      >;
+    };
+  };
+};

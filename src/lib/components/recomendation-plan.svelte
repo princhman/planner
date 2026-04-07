@@ -1,7 +1,6 @@
 <script lang="ts">
     import { api } from "$convex/_generated/api";
     import type { Id } from "$convex/_generated/dataModel";
-    import { authState } from "$lib/stores/auth-store.svelte";
     import { cn } from "$lib/utils";
     import { useConvexClient, useQuery } from "convex-svelte";
     import {
@@ -15,13 +14,12 @@
     import MarkDoneResponsive from "./mark-done-responsive.svelte";
     import Button from "./ui/button/button.svelte";
     const client = useConvexClient();
-    const userId = $derived(authState.userId);
 
     function markDone(topicId: Id<"topics">, confidence: number) {
         client.mutation(api.topics.updateConfidence, {
             id: topicId,
             confidence,
-            backlogMode: false, // real review — updates lastRecallAt
+            backlogMode: false,
         });
     }
 
@@ -29,15 +27,14 @@
     let applyThresholds = $state(true);
     let courseId: Id<"courses"> | undefined = $state(undefined);
 
-    const courses = useQuery(api.courses.list, () =>
-        userId ? { userId } : "skip",
-    );
+    const courses = useQuery(api.courses.list, {});
 
-    const recomendations = useQuery(api.topics.recomendations, () =>
-        userId
-            ? { userId, includeNotStarted, courseId, limit: 4, applyThresholds }
-            : "skip",
-    );
+    const recomendations = useQuery(api.topics.recomendations, () => ({
+        includeNotStarted,
+        courseId,
+        limit: 4,
+        applyThresholds,
+    }));
 
     if (browser) {
         try {

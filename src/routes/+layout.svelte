@@ -1,16 +1,32 @@
 <script lang="ts">
+    // Two jobs: (1) set up Convex, (2) tell Convex about the user's auth token.
+
     import "./layout.css";
 
     import { PUBLIC_CONVEX_URL } from "$env/static/public";
-    import { setupConvex } from "convex-svelte";
-    import { initAuthStore } from "$lib/stores/auth-store.svelte";
-    import { onMount } from "svelte";
+    import { setupConvex, useConvexClient } from "convex-svelte";
     import { Toaster } from "$lib/components/ui/sonner/index.js";
 
-    const { children } = $props();
+    const { children, data } = $props();
+
     setupConvex(PUBLIC_CONVEX_URL);
 
-    initAuthStore();
+    const client = useConvexClient();
+
+    // $effect runs whenever data.token changes (login or logout).
+    // After logout, data.token becomes null → we clear Convex auth.
+    // After login, data.token has the JWT → we set it on Convex.
+    $effect(() => {
+        if (data.token) {
+            client.setAuth(() => Promise.resolve(data.token));
+        } else {
+            // Returning null tells Convex "no user is logged in"
+            client.setAuth(() => Promise.resolve(null));
+        }
+    });
+
+    // Derive auth state from server data (no more localStorage!)
+    const isAuthenticated = $derived(!!data.user);
 </script>
 
 <svelte:head>
@@ -25,6 +41,6 @@
 
 <Toaster position="top-center" />
 
-<main class="mx-auto max-w-3xl px-4">
+<main class="mx-auto max-w-3xl px-4" class:py-4={isAuthenticated}>
     {@render children()}
 </main>

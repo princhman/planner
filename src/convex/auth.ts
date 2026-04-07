@@ -1,79 +1,67 @@
-import { ConvexError, v } from "convex/values";
-import { mutation, query } from "./_generated/server.js";
+import { AuthKit, type AuthFunctions } from "@convex-dev/workos-authkit";
+import { components, internal } from "./_generated/api";
+import type { QueryCtx, MutationCtx } from "./_generated/server";
+import type { DataModel } from "./_generated/dataModel";
 
-// Simple hash function for MVP (not production-grade)
-function simpleHash(password: string): string {
-  let hash = 0;
-  for (let i = 0; i < password.length; i++) {
-    const char = password.charCodeAt(i);
-    hash = ((hash << 5) - hash + char) | 0;
-  }
-  return `hash_${hash.toString(36)}_${password.length}`;
-}
+const authFunctions: AuthFunctions = internal.auth;
 
-export const signUp = mutation({
-  args: {
-    email: v.string(),
-    password: v.string(),
-    name: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const email = args.email.toLowerCase().trim();
-
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .first();
-
-    if (existing) {
-      throw new ConvexError("An account with this email already exists.");
-    }
-
-    if (args.password.length < 8) {
-      throw new ConvexError("Password must be at least 8 characters.");
-    }
-
-    const userId = await ctx.db.insert("users", {
-      email,
-      passwordHash: simpleHash(args.password),
-      name: args.name,
-    });
-
-    return userId;
-  },
+export const authKit = new AuthKit<DataModel>(components.workOSAuthKit, {
+  authFunctions,
 });
 
-export const signIn = mutation({
-  args: {
-    email: v.string(),
-    password: v.string(),
+export const { authKitEvent } = authKit.events({
+  "user.created": async (ctx, event) => {
+    const { id, email, firstName, lastName } = event.data;
+    const name = [firstName, lastName].filter(Boolean).join(" ") || undefined;
+
+    // Check for existing user with same email (legacy migration)
+    const existing = email
+      ? await ctx.db
+          .query("users")
+          .withIndex("by_email", (q) => q.eq("email", email))
+          .first()
+      : null;
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        workosId: id,
+        name: name ?? existing.name,
+      });
+    } else {
+      await ctx.db.insert("users", {
+        workosId: id,
+        email: email,
+        name,
+      });
+    }
   },
-  handler: async (ctx, args) => {
-    const email = args.email.toLowerCase().trim();
+  "user.updated": async (ctx, event) => {
+    const { id, email, firstName, lastName } = event.data;
+    const name = [firstName, lastName].filter(Boolean).join(" ") || undefined;
 
     const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .first();
+      .withIndex("by_workos_id", (q) => q.eq("workosId", id))
+      .unique();
 
-    if (!user) {
-      throw new ConvexError({
-        message: "User with this email does not exist.",
-      });
+    if (user) {
+      await ctx.db.patch(user._id, { email, name: name ?? user.name });
     }
-
-    if (user.passwordHash != simpleHash(args.password)) {
-      throw new ConvexError({ message: "The password is incorrect." });
-    }
-    return user._id;
   },
 });
 
-export const getUser = query({
-  args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
-    if (!user) return null;
-    return { id: user._id, email: user.email };
-  },
-});
+export async function getAuthUser(ctx: QueryCtx) {
+  const workosUser = await authKit.getAuthUser(ctx);
+  if (!workosUser) return null;
+
+  return await ctx.db
+    .query("users")
+    .withIndex("by_workos_id", (q) => q.eq("workosId", workosUser.id))
+    .unique();
+}
+
+export async function getAuthUserOrThrow(ctx: MutationCtx) {
+  const user = await getAuthUser(ctx);
+  if (!user) throw new Error("Not authenticated");
+  return user;
+}
