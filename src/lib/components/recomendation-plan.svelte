@@ -254,6 +254,13 @@
                     </div>
                 </div>
             {/each}
+            {#if recomendations.data?.moreToReview && recomendations.data?.moreToReview > 0}
+                <div class="flex items-center">
+                    <span class="text-xs text-muted-foreground">
+                        And {recomendations.data?.moreToReview} more to review
+                    </span>
+                </div>
+            {/if}
         </div>
     {/if}
 </div>

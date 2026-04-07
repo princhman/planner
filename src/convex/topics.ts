@@ -142,10 +142,12 @@ export const recomendations = query({
 
     filtered.sort((a, b) => b.details.priority - a.details.priority);
     const limit = Math.max(1, Math.min(args.limit ?? 12, 100));
+    const moreToReview = filtered.length - limit;
 
     return {
       items: filtered.slice(0, limit),
       nextReviewMs,
+      moreToReview,
     };
   },
 });
