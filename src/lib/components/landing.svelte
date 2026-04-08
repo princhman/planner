@@ -21,7 +21,27 @@
     });
 </script>
 
-<!-- maybe highlight study less and circle more effectively? -->
+<header class="sticky top-2 z-50">
+    <div
+        class="flex items-center justify-between py-2 px-2 backdrop-blur-md bg-background/60 border rounded-md"
+    >
+        <div class="flex items-center gap-2">
+            <img src="/logo.png" alt="Quextro Planner" class="h-7 w-7" />
+            <span class="font-bold text-xl">Quextro Planner</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <Button
+                variant="ghost"
+                href="/templates"
+                class="text-sm font-medium">Templates</Button
+            >
+            <Button href="/auth/login" class="text-sm font-medium"
+                >Start planning</Button
+            >
+        </div>
+    </div>
+</header>
+
 <div
     class="flex h-screen text-center items-center justify-center flex-col pb-32 gap-1"
 >
@@ -51,7 +71,6 @@
             class="w-full max-w-5xl rounded-md"
             autoplay
             muted
-            loop
             playsinline
             preload="auto"
             poster="/video-poster.webp"
@@ -59,24 +78,5 @@
         >
             <source src="/planner.mp4" type="video/mp4" />
         </video>
-        <!-- <div class="grid grid-cols-1 gap-4 my-">
-            <span class="p-4 border rounded-md">
-                <span class="font-bold pr-1">1.</span> Create course with topics from
-                scratch or templates
-            </span>
-            <span class="p-4 border rounded-md"
-                ><span class="font-bold pr-1">2.</span> Set your current confidence
-                in each topic</span
-            >
-            <span class="p-4 border rounded-md"
-                ><span class="font-bold pr-1">3.</span> Let our spaced repetition
-                algorihtm do the rest</span
-            >
-        </div>
-        <div class="pt-4">
-            <Button href="/auth/login" class="px-8 py-2 text-xl"
-                >Start planning</Button
-            >
-        </div> -->
     </div>
 </div>
