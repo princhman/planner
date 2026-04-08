@@ -38,3 +38,6 @@ Convex is considered available when both of these are true:
 2. The generated Convex API exists, which is created by running `pnpm dev:convex`.
 
 If a user is signed in and Convex is available, the app now boots directly into the Convex-backed repository. Otherwise it falls back to the local browser repository.
+
+
+Compress video command:

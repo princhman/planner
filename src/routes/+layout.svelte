@@ -56,13 +56,13 @@
     <link rel="shortcut icon" href="/favicon-32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <title>Revision Planner</title>
+    <title>Quextro Planner</title>
     <meta name="description" content="what should I revise?" />
     <meta name="theme-color" content="#fafafa" />
 </svelte:head>
 
 <Toaster position="top-center" />
 
-<main class="mx-auto max-w-3xl px-4" class:py-4={isAuthenticated}>
+<main class="mx-auto max-w-6xl px-4" class:py-4={isAuthenticated}>
     {@render children()}
 </main>
