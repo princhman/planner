@@ -63,6 +63,6 @@
 
 <Toaster position="top-center" />
 
-<main class="mx-auto max-w-6xl px-4" class:py-4={isAuthenticated}>
+<main class="mx-auto max-w-5xl px-4" class:py-4={isAuthenticated}>
     {@render children()}
 </main>
