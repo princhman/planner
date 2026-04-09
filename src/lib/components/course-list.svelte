@@ -7,10 +7,19 @@
     import type { ConfidenceCounts } from "./dnd/types";
     import { confidenceBgColors } from "$lib/confidence";
     import { cn } from "$lib/utils";
+    import type { FunctionReturnType } from "convex/server";
 
     const client = useConvexClient();
 
-    const courses = useQuery(api.courses.list, {});
+    interface Props {
+        initialCourses?: FunctionReturnType<typeof api.courses.list> | null;
+    }
+
+    const { initialCourses }: Props = $props();
+
+    const courses = useQuery(api.courses.list, {}, () => ({
+        initialData: initialCourses ?? undefined,
+    }));
 
     const deletecourse = (id: Id<"courses">) => {
         client.mutation(api.courses.remove, { id });

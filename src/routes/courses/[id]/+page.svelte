@@ -31,7 +31,7 @@
     import { goto } from "$app/navigation";
     import CreateTemplate from "$lib/components/course/create-template.svelte";
 
-    let { params }: PageProps = $props();
+    let { params, data }: PageProps = $props();
 
     const client = useConvexClient();
     let isBacklogMode = $state(false);
@@ -80,9 +80,13 @@
         if (days === 1) return "tomorrow";
         return `in ${days}d`;
     });
-    const topics = useQuery(api.topics.listByCourse, () => ({
+    const topicsQuery = useQuery(api.topics.listByCourse, () => ({
         courseId: params.id as Id<"courses">,
+    }), () => ({
+        initialData: data.initialTopics ?? undefined,
     }));
+
+    const topics = $derived(topicsQuery.data);
 
     type TopicUpdate = {
         id: Id<"topics">;
@@ -263,7 +267,7 @@
         {#if showAddTopic}
             <AddTopic courseId={params.id as Id<"courses">} />
         {/if}
-        {#if topics.data}
+        {#if topics}
             <details
                 class="text-sm text-muted-foreground [&>summary]:cursor-pointer [&>summary]:select-none"
             >
@@ -304,9 +308,9 @@
                     </div>
                 </div>
             </details>
-            {#if topics.data.length > 0}
+            {#if topics.length > 0}
                 <DndList
-                    dbTopics={topics.data}
+                    dbTopics={topics}
                     update={updateTopics}
                     courseId={params.id}
                     {isBacklogMode}

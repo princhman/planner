@@ -13,7 +13,16 @@
     import RecomendationSettingsPopover from "./recomendation-settings-popover.svelte";
     import MarkDoneResponsive from "./mark-done-responsive.svelte";
     import Button from "./ui/button/button.svelte";
+    import type { FunctionReturnType } from "convex/server";
+
     const client = useConvexClient();
+
+    interface Props {
+        initialRecommendations?: FunctionReturnType<typeof api.topics.recomendations> | null;
+        initialCourses?: FunctionReturnType<typeof api.courses.list> | null;
+    }
+
+    const { initialRecommendations = null, initialCourses = null }: Props = $props();
 
     function markDone(topicId: Id<"topics">, confidence: number) {
         client.mutation(api.topics.updateConfidence, {
@@ -27,13 +36,17 @@
     let applyThresholds = $state(true);
     let courseId: Id<"courses"> | undefined = $state(undefined);
 
-    const courses = useQuery(api.courses.list, {});
+    const courses = useQuery(api.courses.list, {}, () => ({
+        initialData: initialCourses ?? undefined,
+    }));
 
     const recomendations = useQuery(api.topics.recomendations, () => ({
         includeNotStarted,
         courseId,
         limit: 4,
         applyThresholds,
+    }), () => ({
+        initialData: initialRecommendations ?? undefined,
     }));
 
     if (browser) {
@@ -127,7 +140,7 @@
             >
                 <option class="text-black" value={undefined}>All courses</option
                 >
-                {#each courses.data as course (course._id)}
+                {#each courses.data ?? [] as course (course._id)}
                     <option class="text-black" value={course._id}
                         >{course.name}</option
                     >
@@ -145,7 +158,7 @@
             <span class="text-sm font-medium">All caught up!</span>
             {#if recomendations.data?.nextReviewMs}
                 <p class="text-sm text-muted-foreground">
-                    Next review in ~{formatMs(recomendations.data.nextReviewMs)}
+                    Next review in ~{formatMs(recomendations.data?.nextReviewMs!)}
                 </p>
             {:else}
                 <p class="text-sm text-muted-foreground">

@@ -42,8 +42,8 @@
         {#if isAddingCourse}
             <CreatecourseCard />
         {/if}
-        <CourseList />
-        <RecommendationPlan />
+        <CourseList initialCourses={data.initialCourses} />
+        <RecommendationPlan initialRecommendations={data.initialRecommendations} initialCourses={data.initialCourses} />
     </div>
 {:else}
     <Landing />
