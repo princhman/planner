@@ -27,7 +27,7 @@
     >
         <div class="flex items-center gap-2">
             <img src="/logo.png" alt="Quextro Planner" class="h-7 w-7" />
-            <span class="font-bold text-xl">Quextro Planner</span>
+            <span class="font-bold text-sm lg:text-xl">Quextro Planner</span>
         </div>
         <div class="flex items-center gap-2">
             <Button
@@ -50,7 +50,7 @@
     </span>
     <span class="text-md lg:text-xl text-gray-400">
         with our spaced repetition planner, <span
-            class="font-semibold text-white"
+            class="font-semibold text-white whitespace-nowrap"
             bind:this={studyLess}>study less</span
         >, but more
         <span class="font-semibold text-white" bind:this={effectively}
