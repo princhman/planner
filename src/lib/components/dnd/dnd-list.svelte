@@ -39,6 +39,12 @@
     let collapsedIds: Set<Id<"topics">> = $state(new Set<Id<"topics">>());
     let editingTitleId: Id<"topics"> | null = $state(null);
 
+    $effect(() => {
+        if (!isEditMode) {
+            editingTitleId = null;
+        }
+    });
+
     // getting the preserved state
     if (browser) {
         try {

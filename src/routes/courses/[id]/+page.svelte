@@ -80,11 +80,15 @@
         if (days === 1) return "tomorrow";
         return `in ${days}d`;
     });
-    const topicsQuery = useQuery(api.topics.listByCourse, () => ({
-        courseId: params.id as Id<"courses">,
-    }), () => ({
-        initialData: data.initialTopics ?? undefined,
-    }));
+    const topicsQuery = useQuery(
+        api.topics.listByCourse,
+        () => ({
+            courseId: params.id as Id<"courses">,
+        }),
+        () => ({
+            initialData: data.initialTopics ?? undefined,
+        }),
+    );
 
     const topics = $derived(topicsQuery.data);
 
