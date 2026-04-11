@@ -110,7 +110,7 @@
         <div
             class={cn(
                 "flex flex-1 min-w-0 items-center",
-                sortable.isDragSource ? "bg-gray-700" : "max-w-md",
+                sortable.isDragSource ? "bg-gray-700" : "",
                 contextMenuOpen && "rounded-sm ring-1 ring-primary",
             )}
             style:margin-left="{topic.depth * 24}px"
@@ -142,7 +142,7 @@
                     />
                 {:else}
                     <span
-                        class="flex-1 min-w-0 truncate"
+                        class="min-w-0 max-w-[70ch] truncate"
                         title={topic.title}
                         use:truncateTooltip
                     >
@@ -174,7 +174,7 @@
             </div>
         </div>
 
-        <div class="ml-auto shrink-0 flex items-center">
+        <div class="ml- shrink-0 flex items-center">
             {#if isEditMode}
                 <div class="flex items-center gap-0.5">
                     <DropdownMenu.Root>
