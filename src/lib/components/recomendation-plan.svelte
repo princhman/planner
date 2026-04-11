@@ -18,11 +18,14 @@
     const client = useConvexClient();
 
     interface Props {
-        initialRecommendations?: FunctionReturnType<typeof api.topics.recomendations> | null;
+        initialRecommendations?: FunctionReturnType<
+            typeof api.topics.recomendations
+        > | null;
         initialCourses?: FunctionReturnType<typeof api.courses.list> | null;
     }
 
-    const { initialRecommendations = null, initialCourses = null }: Props = $props();
+    const { initialRecommendations = null, initialCourses = null }: Props =
+        $props();
 
     function markDone(topicId: Id<"topics">, confidence: number) {
         client.mutation(api.topics.updateConfidence, {
@@ -40,14 +43,18 @@
         initialData: initialCourses ?? undefined,
     }));
 
-    const recomendations = useQuery(api.topics.recomendations, () => ({
-        includeNotStarted,
-        courseId,
-        limit: 4,
-        applyThresholds,
-    }), () => ({
-        initialData: initialRecommendations ?? undefined,
-    }));
+    const recomendations = useQuery(
+        api.topics.recomendations,
+        () => ({
+            includeNotStarted,
+            courseId,
+            limit: 4,
+            applyThresholds,
+        }),
+        () => ({
+            initialData: initialRecommendations ?? undefined,
+        }),
+    );
 
     if (browser) {
         try {
@@ -158,7 +165,9 @@
             <span class="text-sm font-medium">All caught up!</span>
             {#if recomendations.data?.nextReviewMs}
                 <p class="text-sm text-muted-foreground">
-                    Next review in ~{formatMs(recomendations.data?.nextReviewMs!)}
+                    Next review in ~{formatMs(
+                        recomendations.data?.nextReviewMs!,
+                    )}
                 </p>
             {:else}
                 <p class="text-sm text-muted-foreground">
@@ -178,16 +187,18 @@
                         i === 0 && "border-primary/40 bg-primary/5",
                     )}
                 >
-                    <div class="flex items-start justify-between gap-2">
+                    <div class="flex items-start justify-between gap-2 min-w-0">
                         <div
-                            class="flex items-center gap-2 text-xs text-muted-foreground"
+                            class="min-w-0 flex items-center gap-2 text-xs text-muted-foreground"
                         >
-                            <span class="text-sm font-medium truncate">
+                            <span
+                                class="text-sm font-medium truncate max-w-[70ch]"
+                            >
                                 {rec.topic.title}
                             </span>
                             <a
                                 href="/courses/{rec.courseId}"
-                                class="rounded bg-muted px-1.5 py-0.5 truncate max-w-32 hover:bg-muted/80"
+                                class="rounded bg-muted px-1.5 py-0.5 truncate max-w-32 hover:bg-muted/80 shrink-0"
                             >
                                 {rec.courseName}
                             </a>
