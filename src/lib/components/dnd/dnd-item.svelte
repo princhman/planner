@@ -14,7 +14,7 @@
     import * as ContextMenu from "$lib/components/ui/context-menu";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
     import { Ellipsis } from "lucide-svelte";
-    import { cn } from "$lib/utils";
+    import { cn, formatDuration } from "$lib/utils";
     import { truncateTooltip } from "$lib/actions/truncate-tooltip";
 
     const config = {
@@ -149,8 +149,8 @@
                         {topic.title}</span
                     >
                 {/if}
-                {#if !isEditMode && topic.isLeaf && topic.nextReview && topic.nextReview < Date.now() && topic.confidence > 1}
-                    <span class="text-xs text-muted-foreground">DUE</span>
+                {#if !isEditMode && topic.isLeaf && topic.nextReview && topic.nextReview <= 0 && topic.confidence > 1}
+                    <span class="text-xs text-muted-foreground"> DUE </span>
                 {/if}
                 {#if isEditMode && isEdit}
                     <Button
