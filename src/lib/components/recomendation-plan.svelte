@@ -14,6 +14,7 @@
     import MarkDoneResponsive from "./mark-done-responsive.svelte";
     import Button from "./ui/button/button.svelte";
     import type { FunctionReturnType } from "convex/server";
+    import ChevronRight from "@lucide/svelte/icons/chevron-right";
 
     const client = useConvexClient();
 
@@ -187,38 +188,38 @@
                         i === 0 && "border-primary/40 bg-primary/5",
                     )}
                 >
-                    <div class="flex items-start justify-between gap-2 min-w-0">
-                        <div
-                            class="min-w-0 flex items-center gap-2 text-xs text-muted-foreground"
-                        >
-                            <span
-                                class="text-sm font-medium truncate max-w-[70ch]"
-                            >
-                                {rec.topic.title}
-                            </span>
+                    <div
+                        class="min-w-0 flex flex-col text-xs text-muted-foreground gap-1"
+                    >
+                        <div class="flex items-center min-w-0">
                             <a
                                 href="/courses/{rec.courseId}"
                                 class="rounded bg-muted px-1.5 py-0.5 truncate max-w-32 hover:bg-muted/80 shrink-0"
                             >
                                 {rec.courseName}
                             </a>
-                            {#if examLabel}
-                                <span
-                                    class="flex items-center gap-0.5"
-                                    title="Exam {examLabel}"
-                                >
-                                    <GraduationCap class="size-3" />
-                                    {examLabel}
-                                </span>
+                            {#if rec.path}
+                                <ChevronRight class="h-4 w-4" />
+                                {#each rec.path as path, i}
+                                    <span>{path}</span>
+                                    {#if i < rec.path.length - 1}
+                                        <ChevronRight class="h-4 w-4" />
+                                    {/if}
+                                {/each}
                             {/if}
+                            <div class="ml-auto">
+                                {#if i === 0}
+                                    <span
+                                        class="shrink-0 rounded-md bg-primary/25 border border-primary/40 px-1.5 py-0.5 text-xs font-medium"
+                                    >
+                                        Start here
+                                    </span>
+                                {/if}
+                            </div>
                         </div>
-                        {#if i === 0}
-                            <span
-                                class="shrink-0 rounded-md bg-primary/25 border border-primary/40 px-1.5 py-0.5 text-xs font-medium"
-                            >
-                                Start here
-                            </span>
-                        {/if}
+                        <span class="text-sm font-medium truncate max-w-[70ch]">
+                            {rec.topic.title}
+                        </span>
                     </div>
 
                     <div
@@ -257,6 +258,15 @@
                                 ? formatDays(rec.details.tDays)
                                 : "never"}
                         </span>
+                        {#if examLabel}
+                            <span
+                                class="flex items-center gap-0.5"
+                                title="Exam {examLabel}"
+                            >
+                                <GraduationCap class="size-3" />
+                                {examLabel}
+                            </span>
+                        {/if}
 
                         <span class="ml-auto">
                             <MarkDoneResponsive

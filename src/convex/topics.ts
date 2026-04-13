@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel.js";
-import type { MutationCtx } from "./_generated/server.js";
+import type { MutationCtx, QueryCtx } from "./_generated/server.js";
 import { mutation, query } from "./_generated/server.js";
 import { getAuthUser, getAuthUserOrThrow } from "./auth.js";
 
@@ -83,6 +83,8 @@ export const recomendations = query({
       { eu: number; name: string; examDate?: string }
     >();
 
+    const parentPathCache = new Map<Id<"topics"> | undefined, string[]>();
+
     const allComputed = await Promise.all(
       topics.map(async (topic) => {
         if (!courseCache.has(topic.courseId)) {
@@ -95,15 +97,20 @@ export const recomendations = query({
             examDate: course?.examDate,
           });
         }
+
+        if (!parentPathCache.has(topic.parentId)) {
+          const parentPath = await findTopicPath(ctx, topic.parentId);
+          parentPathCache.set(topic.parentId, parentPath);
+        }
+
         const { eu, name, examDate } = courseCache.get(topic.courseId)!;
-        const c = topic.confidence;
         const s = Math.max(topic.stability ?? 1, 0.05);
         const tDays = Math.max(0.05, (now - (topic.lastRecallAt ?? 0)) / dayMs);
         const r = Math.pow(1 + (19 / 81) * (tDays / s), -0.5);
         const needsReview = r < REVIEW_THRESHOLD;
         needsNext ||= needsReview;
 
-        const priority = (5 - c) * (1 - r) * eu;
+        const priority = (5 - topic.confidence) * (1 - r) * eu;
         return {
           topic,
           details: {
@@ -116,6 +123,7 @@ export const recomendations = query({
           courseName: name,
           examDate: examDate,
           needsReview,
+          path: parentPathCache.get(topic.parentId),
         };
       }),
     );
@@ -483,6 +491,18 @@ async function setIsLeafFromChildren(
     .withIndex("by_parentId", (q) => q.eq("parentId", topicId))
     .collect();
   await ctx.db.patch(topicId, { isLeaf: children.length === 0 });
+}
+
+async function findTopicPath(
+  ctx: QueryCtx,
+  topicId: Id<"topics"> | undefined,
+): Promise<string[]> {
+  if (!topicId) return [];
+  const topic = await ctx.db.get(topicId);
+  if (!topic) return [];
+
+  const parentPath = await findTopicPath(ctx, topic.parentId);
+  return [...parentPath, topic.title];
 }
 
 function computeExamUrgency(
