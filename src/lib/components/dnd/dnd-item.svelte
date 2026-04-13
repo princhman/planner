@@ -14,7 +14,7 @@
     import * as ContextMenu from "$lib/components/ui/context-menu";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
     import { Ellipsis } from "lucide-svelte";
-    import { cn, formatDuration } from "$lib/utils";
+    import { cn } from "$lib/utils";
     import { truncateTooltip } from "$lib/actions/truncate-tooltip";
 
     const config = {
@@ -106,10 +106,10 @@
 </script>
 
 {#snippet itemContent()}
-    <div class="flex w-full items-center">
+    <div class="flex w-full items-center group">
         <div
             class={cn(
-                "flex flex-1 min-w-0 items-center",
+                "flex w-full min-w-0 items-center group-hover:bg-gray-700 group-hover:rounded-md",
                 sortable.isDragSource ? "bg-gray-700" : "",
                 contextMenuOpen && "rounded-sm ring-1 ring-primary",
             )}
@@ -175,49 +175,52 @@
                     />
                 {/if}
             </div>
-        </div>
 
-        <div class="ml- shrink-0 flex items-center">
-            {#if isEditMode}
-                <div class="flex items-center gap-0.5">
-                    <DropdownMenu.Root>
-                        <DropdownMenu.Trigger>
-                            <Ellipsis
-                                class="text-muted-foreground cursor-pointer lg:invisible lg:group-hover:visible"
-                            />
-                        </DropdownMenu.Trigger>
-                        <DropdownMenu.Content>
-                            {#if editingTitleId === topic.id}
-                                <DropdownMenu.Item onclick={updateTitle}
-                                    ><Check /> Save</DropdownMenu.Item
+            <div class="shrink-0 flex items-center pr-1">
+                {#if isEditMode}
+                    <div class="flex items-center gap-0.5">
+                        <DropdownMenu.Root>
+                            <DropdownMenu.Trigger>
+                                <Ellipsis
+                                    class="text-muted-foreground cursor-pointer lg:invisible lg:group-hover:visible"
+                                />
+                            </DropdownMenu.Trigger>
+                            <DropdownMenu.Content>
+                                {#if editingTitleId === topic.id}
+                                    <DropdownMenu.Item onclick={updateTitle}
+                                        ><Check /> Save</DropdownMenu.Item
+                                    >
+                                {:else}
+                                    <DropdownMenu.Item
+                                        onclick={() =>
+                                            (editingTitleId = topic.id)}
+                                        ><Pencil /> Edit</DropdownMenu.Item
+                                    >
+                                {/if}
+                                <DropdownMenu.Item onclick={addBelow}
+                                    ><Plus /> Add below</DropdownMenu.Item
                                 >
-                            {:else}
                                 <DropdownMenu.Item
-                                    onclick={() => (editingTitleId = topic.id)}
-                                    ><Pencil /> Edit</DropdownMenu.Item
+                                    variant="destructive"
+                                    onclick={deleteTopic}
+                                    ><Trash2 /> Delete</DropdownMenu.Item
                                 >
-                            {/if}
-                            <DropdownMenu.Item onclick={addBelow}
-                                ><Plus /> Add below</DropdownMenu.Item
-                            >
-                            <DropdownMenu.Item
-                                variant="destructive"
-                                onclick={deleteTopic}
-                                ><Trash2 /> Delete</DropdownMenu.Item
-                            >
-                        </DropdownMenu.Content>
-                    </DropdownMenu.Root>
-                    <GripVertical class="text-muted-foreground cursor-grab" />
-                </div>
-            {:else}
-                <ConfidenceSelector
-                    value={topic.confidence}
-                    onChange={(value: number) => updateConfidence(value)}
-                    readOnly={canCollapse}
-                    confidenceCounts={topic.confidenceCounts! as ConfidenceCounts}
-                    topicName={topic.title}
-                />
-            {/if}
+                            </DropdownMenu.Content>
+                        </DropdownMenu.Root>
+                        <GripVertical
+                            class="text-muted-foreground cursor-grab"
+                        />
+                    </div>
+                {:else}
+                    <ConfidenceSelector
+                        value={topic.confidence}
+                        onChange={(value: number) => updateConfidence(value)}
+                        readOnly={canCollapse}
+                        confidenceCounts={topic.confidenceCounts! as ConfidenceCounts}
+                        topicName={topic.title}
+                    />
+                {/if}
+            </div>
         </div>
     </div>
 {/snippet}
