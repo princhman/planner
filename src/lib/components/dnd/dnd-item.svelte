@@ -149,6 +149,9 @@
                         {topic.title}</span
                     >
                 {/if}
+                {#if !isEditMode && topic.isLeaf && topic.nextReview && topic.nextReview < Date.now() && topic.confidence > 1}
+                    <span class="text-xs text-muted-foreground">DUE</span>
+                {/if}
                 {#if isEditMode && isEdit}
                     <Button
                         size="icon-xs"
