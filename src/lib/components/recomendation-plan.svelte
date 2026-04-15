@@ -236,7 +236,7 @@
                                             class={cn(
                                                 i === grp.path.length - 1 &&
                                                     "font-bold",
-                                                "truncate max-w-[20ch]",
+                                                "truncate max-w-[30ch]",
                                             )}
                                             title={path}
                                             use:truncateTooltip>{path}</span
@@ -371,7 +371,7 @@
                                     <ChevronRight class="h-4 w-4" />
                                     {#each rec.path as path, i}
                                         <span
-                                            class="truncate max-w-[20ch]"
+                                            class="truncate max-w-[30ch]"
                                             title={path}
                                             use:truncateTooltip>{path}</span
                                         >
