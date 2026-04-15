@@ -101,6 +101,7 @@ export const recommendations = query({
 
     const parentPathCache = new Map<Id<"topics"> | undefined, string[]>();
 
+    let nextReviewMs: number | null = null;
     const allComputed = await Promise.all(
       topics.map(async (topic) => {
         if (!courseCache.has(topic.courseId)) {
@@ -124,41 +125,32 @@ export const recommendations = query({
         const tDays = Math.max(0.05, (now - (topic.lastRecallAt ?? 0)) / dayMs);
         const r = Math.pow(1 + (19 / 81) * (tDays / s), -0.5);
         const needsReview = r < REVIEW_THRESHOLD;
-        needsNext ||= needsReview;
+
+        if (args.applyThresholds && !needsReview) {
+          const tDaysUntilThreshold =
+            s * (81 / 19) * (Math.pow(REVIEW_THRESHOLD, -2) - 1);
+          const reviewAtMs =
+            (topic.lastRecallAt ?? 0) + tDaysUntilThreshold * dayMs;
+          const msUntil = reviewAtMs - now;
+          if (
+            msUntil > 0 &&
+            (nextReviewMs === null || msUntil < nextReviewMs)
+          ) {
+            nextReviewMs = msUntil;
+          }
+        }
 
         const priority = (5 - topic.confidence) * (1 - r) * eu;
         return {
           topic,
-          details: {
-            priority,
-            r,
-            eu,
-            tDays,
-          },
-          courseId: topic.courseId,
+          priority,
           courseName: name,
           examDate: examDate,
-          needsReview,
           path: parentPathCache.get(topic.parentId),
+          needsReview,
         };
       }),
     );
-
-    let nextReviewMs: number | null = null;
-    if (args.applyThresholds && !needsNext) {
-      for (const item of allComputed) {
-        if (item.needsReview) continue;
-        const s = Math.max(item.topic.stability ?? 1, 0.05);
-        const tDaysUntilThreshold =
-          s * (81 / 19) * (Math.pow(REVIEW_THRESHOLD, -2) - 1);
-        const lastRecallAt = item.topic.lastRecallAt ?? 0;
-        const reviewAtMs = lastRecallAt + tDaysUntilThreshold * dayMs;
-        const msUntil = reviewAtMs - now;
-        if (msUntil > 0 && (nextReviewMs === null || msUntil < nextReviewMs)) {
-          nextReviewMs = msUntil;
-        }
-      }
-    }
 
     const filtered = args.applyThresholds
       ? allComputed.filter((item) => item.needsReview)
@@ -168,18 +160,33 @@ export const recommendations = query({
 
     if (args.group) {
       const groups = filtered.reduce<
-        Record<Id<"topics">, { topics: Doc<"topics">[]; prioritySum: number }>
+        Record<
+          Id<"topics">,
+          {
+            topics: Doc<"topics">[];
+            prioritySum: number;
+            courseName: string;
+            path: string[];
+            examDate: string | undefined;
+          }
+        >
       >((acc, item) => {
         if (!item.needsReview) return acc;
 
         const key = item.topic.parentId;
         if (!key) return acc; // ignoring first level topics for now
         if (!acc[key]) {
-          acc[key] = { topics: [], prioritySum: 0 };
+          acc[key] = {
+            topics: [],
+            prioritySum: 0,
+            courseName: item.courseName,
+            path: item.path ?? [],
+            examDate: item.examDate,
+          };
         }
 
         acc[key].topics.push(item.topic);
-        acc[key].prioritySum += item.details.priority;
+        acc[key].prioritySum += item.priority;
         return acc;
       }, {});
 
@@ -191,15 +198,7 @@ export const recommendations = query({
 
       const limitedGroups = sortedGroups.slice(0, limit);
 
-      const result = await Promise.all(
-        limitedGroups.map(async ([key, group]) => {
-          const parentTopic = await ctx.db.get(key as Id<"topics">);
-          return {
-            parentTopic,
-            children: group.topics,
-          };
-        }),
-      );
+      const result = limitedGroups.map(([, group]) => group);
 
       return {
         mode: "grouped" as const,
@@ -210,7 +209,7 @@ export const recommendations = query({
     } else {
       const moreToReview = filtered.length - limit;
 
-      filtered.sort((a, b) => b.details.priority - a.details.priority);
+      filtered.sort((a, b) => b.priority - a.priority);
       return {
         mode: "items" as const,
         items: filtered.slice(0, limit),

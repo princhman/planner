@@ -15,6 +15,7 @@
     import Button from "./ui/button/button.svelte";
     import type { FunctionReturnType } from "convex/server";
     import ChevronRight from "@lucide/svelte/icons/chevron-right";
+    import { truncateTooltip } from "$lib/actions/truncate-tooltip";
 
     const client = useConvexClient();
 
@@ -29,7 +30,7 @@
         $props();
 
     function markDone(topicId: Id<"topics">, confidence: number) {
-        client.mutation(api.topics.updateConfidence, {
+        return client.mutation(api.topics.updateConfidence, {
             id: topicId,
             confidence,
             backlogMode: false,
@@ -130,7 +131,8 @@
         );
     });
 
-    function formatDays(days: number): string {
+    function formatDays(lastRecallAt: number): string {
+        const days = Math.max(0.05, (Date.now() - lastRecallAt) / 86_400_000);
         if (days <= 0.05) return "less than 1 hour ago";
         if (days < 1) return `${Math.round(days * 24)}h ago`;
         if (days < 30) return `${Math.round(days)}d ago`;
@@ -198,46 +200,121 @@
         {:else}
             <div class="flex flex-col gap-2">
                 {#each recomendations.data?.groups ?? [] as grp, i}
+                    {@const groupTopics = grp.topics.map((child) => ({
+                        key: child._id,
+                        title: child.title,
+                        currentConfidence: child.confidence,
+                    }))}
                     <div
                         class={cn(
                             "flex flex-col gap-2 rounded-md border px-3 py-2",
                             i === 0 && "border-primary/40 bg-primary/5",
                         )}
                     >
-                        <div class="flex items-center">
-                            <span class="text-sm font-medium truncate">
-                                {grp.parentTopic?.title ?? "Root topics"}
-                            </span>
-                            <span class="ml-auto text-xs text-muted-foreground">
-                                {grp.children.length} topics
-                            </span>
+                        <div class="flex items-center justify-between">
+                            <div
+                                class="flex items-center text-xs text-muted-foreground"
+                            >
+                                {#if grp.topics.length > 0}
+                                    <a
+                                        href="/courses/{grp.topics[0].courseId}"
+                                        class="rounded bg-muted px-1.5 py-0.5 truncate max-w-32 hover:bg-muted/80 shrink-0"
+                                    >
+                                        {grp.courseName}
+                                    </a>
+                                {:else}
+                                    <span
+                                        class="rounded bg-muted px-1.5 py-0.5 truncate max-w-32 shrink-0"
+                                    >
+                                        {grp.courseName}
+                                    </span>
+                                {/if}
+                                {#if grp.path}
+                                    <ChevronRight class="h-4 w-4" />
+                                    {#each grp.path as path, i}
+                                        <span
+                                            class={cn(
+                                                i === grp.path.length - 1 &&
+                                                    "font-bold",
+                                                "truncate max-w-[20ch]",
+                                            )}
+                                            title={path}
+                                            use:truncateTooltip>{path}</span
+                                        >
+                                        {#if i < grp.path.length - 1}
+                                            <ChevronRight class="h-4 w-4" />
+                                        {/if}
+                                    {/each}
+                                {/if}
+                            </div>
+                            <MarkDoneResponsive
+                                topics={groupTopics}
+                                onSelect={(level, topic) =>
+                                    markDone(topic.key as Id<"topics">, level)}
+                            >
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    class="h-6 px-2 text-xs gap-1"
+                                >
+                                    <Check class="size-3" />
+                                    Mark reviewed
+                                </Button>
+                            </MarkDoneResponsive>
                         </div>
 
                         <div class="flex flex-col gap-1">
-                            {#each grp.children as child (child._id)}
+                            {#each grp.topics as child (child._id)}
                                 <div
-                                    class="flex items-center gap-2 rounded border border-dashed px-2 py-1"
+                                    class="flex items-center gap-2 rounded border border-dashed px-2 py-1 justify-between"
                                 >
-                                    <span class="text-sm truncate max-w-[60ch]">
+                                    <span
+                                        class="text-sm font-medium truncate max-w-[70ch] text-muted-foreground"
+                                        use:truncateTooltip
+                                        title={child.title}
+                                    >
                                         {child.title}
                                     </span>
-                                    <span class="ml-auto">
-                                        <MarkDoneResponsive
-                                            topicTitle={child.title}
-                                            currentConfidence={child.confidence}
-                                            onSelect={(level) =>
-                                                markDone(child._id, level)}
+                                    <div
+                                        class="flex items-center gap-2 text-xs shrink-0"
+                                    >
+                                        <span
+                                            class="flex items-center gap-1 text-muted-foreground"
+                                            title="Last reviewed"
                                         >
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                class="h-6 px-2 text-xs gap-1"
+                                            <Clock class="size-3" />
+                                            {child.lastRecallAt
+                                                ? formatDays(child.lastRecallAt)
+                                                : "never"}
+                                        </span>
+                                        <span
+                                            class="flex items-center gap-1"
+                                            title="Confidence: {confidenceLabels[
+                                                child.confidence - 1
+                                            ] ?? 'Not started'}"
+                                        >
+                                            <div
+                                                class={cn(
+                                                    "size-2 rounded-full",
+                                                    confidenceBgColors[
+                                                        child.confidence - 1
+                                                    ] ?? confidenceBgColors[0],
+                                                )}
+                                            ></div>
+                                            <span
+                                                class={cn(
+                                                    confidenceTextColors[
+                                                        child.confidence - 1
+                                                    ] ??
+                                                        confidenceTextColors[0],
+                                                )}
                                             >
-                                                <Check class="size-3" />
-                                                Mark reviewed
-                                            </Button>
-                                        </MarkDoneResponsive>
-                                    </span>
+                                                {confidenceLabels[
+                                                    child.confidence - 1
+                                                ] ?? "Not started"}
+                                            </span>
+                                        </span>
+                                    </div>
                                 </div>
                             {/each}
                         </div>
@@ -272,7 +349,6 @@
         {:else}
             <div class="flex flex-col gap-1.5">
                 {#each recomendations.data?.items ?? [] as rec, i (rec.topic._id)}
-                    {@const retrieval = Math.round(rec.details.r * 100)}
                     {@const conf = rec.topic.confidence}
                     {@const examLabel = formatExamDays(rec.examDate)}
                     <div
@@ -286,7 +362,7 @@
                         >
                             <div class="flex items-center min-w-0">
                                 <a
-                                    href="/courses/{rec.courseId}"
+                                    href="/courses/{rec.topic.courseId}"
                                     class="rounded bg-muted px-1.5 py-0.5 truncate max-w-32 hover:bg-muted/80 shrink-0"
                                 >
                                     {rec.courseName}
@@ -294,7 +370,11 @@
                                 {#if rec.path}
                                     <ChevronRight class="h-4 w-4" />
                                     {#each rec.path as path, i}
-                                        <span>{path}</span>
+                                        <span
+                                            class="truncate max-w-[20ch]"
+                                            title={path}
+                                            use:truncateTooltip>{path}</span
+                                        >
                                         {#if i < rec.path.length - 1}
                                             <ChevronRight class="h-4 w-4" />
                                         {/if}
@@ -312,6 +392,8 @@
                             </div>
                             <span
                                 class="text-sm font-medium truncate max-w-[70ch]"
+                                use:truncateTooltip
+                                title={rec.topic.title}
                             >
                                 {rec.topic.title}
                             </span>
@@ -352,7 +434,7 @@
                             >
                                 <Clock class="size-3" />
                                 {rec.topic.lastRecallAt
-                                    ? formatDays(rec.details.tDays)
+                                    ? formatDays(rec.topic.lastRecallAt)
                                     : "never"}
                             </span>
                             {#if examLabel}

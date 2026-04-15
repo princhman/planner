@@ -37,7 +37,7 @@
                 <Switch bind:checked={includeNotStarted} />
             </div>
             <div class="flex items-center justify-between">
-                <span>Group by parent topic</span>
+                <span>Group</span>
                 <Switch bind:checked={group} />
             </div>
         </div>
