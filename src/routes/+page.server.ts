@@ -12,10 +12,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 
   const [courses, recommendations] = await Promise.all([
     convex.query(api.courses.list, {}),
-    convex.query(api.topics.recomendations, {
-      includeNotStarted: false,
+    convex.query(api.topics.recommendations, {
+      includeNotStarted: true,
       limit: 4,
       applyThresholds: true,
+      group: false,
     }),
   ]);
 

@@ -109,9 +109,10 @@
     <div class="flex w-full items-center group">
         <div
             class={cn(
-                "flex w-full min-w-0 items-center group-hover:bg-gray-700 group-hover:rounded-md",
+                "flex w-full min-w-0 items-center  rounded-md",
                 sortable.isDragSource ? "bg-gray-700" : "",
                 contextMenuOpen && "rounded-sm ring-1 ring-primary",
+                !isEdit ? "group-hover:bg-gray-700" : "",
             )}
             style:margin-left="{topic.depth * 24}px"
         >
@@ -157,7 +158,7 @@
                         size="icon-xs"
                         variant="ghost"
                         disabled={anotherIsEdting}
-                        class="w-5 h-5 p-0 {isEdit
+                        class="w-6 h-6 p-0 {isEdit
                             ? 'visible'
                             : 'lg:invisible'} {!isEdit
                             ? 'lg:group-hover:visible'
@@ -182,7 +183,7 @@
                         <DropdownMenu.Root>
                             <DropdownMenu.Trigger>
                                 <Ellipsis
-                                    class="text-muted-foreground cursor-pointer lg:invisible lg:group-hover:visible"
+                                    class="h-6 w-6 text-muted-foreground cursor-pointer lg:invisible lg:group-hover:visible"
                                 />
                             </DropdownMenu.Trigger>
                             <DropdownMenu.Content>
@@ -208,7 +209,7 @@
                             </DropdownMenu.Content>
                         </DropdownMenu.Root>
                         <GripVertical
-                            class="text-muted-foreground cursor-grab"
+                            class="h-6 w-6  text-muted-foreground cursor-grab"
                         />
                     </div>
                 {:else}

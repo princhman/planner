@@ -70,7 +70,8 @@
     <div class="flex flex-col gap-3 p-4 md:p-0">
         <p class="text-sm text-muted-foreground">
             How confident are you about <span
-                class="font-medium text-foreground">{topicTitle}</span
+                class="font-medium text-foreground block line-clamp-2 break-all"
+                title={topicTitle}>{topicTitle}</span
             >?
         </p>
         <div class="flex flex-col gap-1.5">
@@ -113,7 +114,7 @@
             -->
             {@render children()}
         </Dialog.Trigger>
-        <Dialog.Content class="sm:max-w-sm">
+        <Dialog.Content class="sm:max-w-sm overflow-hidden">
             <Dialog.Header>
                 <Dialog.Title>Mark as reviewed</Dialog.Title>
                 <Dialog.Description>

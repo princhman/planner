@@ -7,11 +7,13 @@
     interface Props {
         applyThresholds: boolean;
         includeNotStarted: boolean;
+        group: boolean;
     }
 
     let {
         applyThresholds = $bindable(),
         includeNotStarted = $bindable(),
+        group = $bindable(),
     }: Props = $props();
 </script>
 
@@ -33,6 +35,10 @@
             <div class="flex items-center justify-between">
                 <span>Include not started</span>
                 <Switch bind:checked={includeNotStarted} />
+            </div>
+            <div class="flex items-center justify-between">
+                <span>Group by parent topic</span>
+                <Switch bind:checked={group} />
             </div>
         </div>
     </Popover.Content>

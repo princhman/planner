@@ -39,16 +39,32 @@ export const listByCourse = query({
   },
 });
 
-export const recomendations = query({
+export const recommendations = query({
   args: {
     includeNotStarted: v.boolean(),
     courseId: v.optional(v.id("courses")),
     limit: v.optional(v.number()),
     applyThresholds: v.boolean(),
+    group: v.boolean(),
   },
   handler: async (ctx, args) => {
     const user = await getAuthUser(ctx);
-    if (!user) return { items: [], nextReviewMs: null };
+    if (!user) {
+      if (args.group) {
+        return {
+          mode: "grouped" as const,
+          groups: [],
+          nextReviewMs: null,
+          moreToReview: 0,
+        };
+      }
+      return {
+        mode: "items" as const,
+        items: [],
+        nextReviewMs: null,
+        moreToReview: 0,
+      };
+    }
     const courseId = args.courseId;
     const now = Date.now();
     const dayMs = 86_400_000;
@@ -148,15 +164,60 @@ export const recomendations = query({
       ? allComputed.filter((item) => item.needsReview)
       : allComputed;
 
-    filtered.sort((a, b) => b.details.priority - a.details.priority);
     const limit = Math.max(1, Math.min(args.limit ?? 12, 100));
-    const moreToReview = filtered.length - limit;
 
-    return {
-      items: filtered.slice(0, limit),
-      nextReviewMs,
-      moreToReview,
-    };
+    if (args.group) {
+      const groups = filtered.reduce<
+        Record<Id<"topics">, { topics: Doc<"topics">[]; prioritySum: number }>
+      >((acc, item) => {
+        if (!item.needsReview) return acc;
+
+        const key = item.topic.parentId;
+        if (!key) return acc; // ignoring first level topics for now
+        if (!acc[key]) {
+          acc[key] = { topics: [], prioritySum: 0 };
+        }
+
+        acc[key].topics.push(item.topic);
+        acc[key].prioritySum += item.details.priority;
+        return acc;
+      }, {});
+
+      const sortedGroups = Object.entries(groups).sort(
+        (a, b) => b[1].prioritySum - a[1].prioritySum,
+      );
+
+      const moreToReview = sortedGroups.length - limit;
+
+      const limitedGroups = sortedGroups.slice(0, limit);
+
+      const result = await Promise.all(
+        limitedGroups.map(async ([key, group]) => {
+          const parentTopic = await ctx.db.get(key as Id<"topics">);
+          return {
+            parentTopic,
+            children: group.topics,
+          };
+        }),
+      );
+
+      return {
+        mode: "grouped" as const,
+        groups: result,
+        nextReviewMs,
+        moreToReview: Math.max(0, moreToReview),
+      };
+    } else {
+      const moreToReview = filtered.length - limit;
+
+      filtered.sort((a, b) => b.details.priority - a.details.priority);
+      return {
+        mode: "items" as const,
+        items: filtered.slice(0, limit),
+        nextReviewMs,
+        moreToReview: Math.max(0, moreToReview),
+      };
+    }
   },
 });
 
