@@ -116,7 +116,7 @@
             )}
             style:margin-left="{topic.depth * 24}px"
         >
-            <div class="w-5 h-5 items-center shrink-0">
+            <div class="flex size-5 shrink-0 items-center justify-center">
                 {#if canCollapse}
                     <Button
                         size="icon-xs"
