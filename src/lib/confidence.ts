@@ -1,3 +1,5 @@
+export type ConfidenceLevel = 1 | 2 | 3 | 4 | 5;
+
 export const confidenceLabels = [
     "Not started",
     "Recognise it",
@@ -21,3 +23,22 @@ export const confidenceTextColors = [
     "text-yellow-400",
     "text-green-400",
 ];
+
+export function toConfidenceLevel(
+    confidence: unknown,
+    fallback: ConfidenceLevel = 1,
+): ConfidenceLevel {
+    const value =
+        typeof confidence === "string" ? Number(confidence) : confidence;
+
+    if (
+        typeof value === "number" &&
+        Number.isInteger(value) &&
+        value >= 1 &&
+        value <= 5
+    ) {
+        return value as ConfidenceLevel;
+    }
+
+    return fallback;
+}

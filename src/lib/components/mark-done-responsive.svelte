@@ -3,7 +3,12 @@
     import * as Drawer from "$lib/components/ui/drawer/index.js";
     import Button from "$lib/components/ui/button/button.svelte";
     import { cn } from "$lib/utils";
-    import { confidenceLabels, confidenceBgColors } from "$lib/confidence";
+    import {
+        confidenceLabels,
+        confidenceBgColors,
+        toConfidenceLevel,
+        type ConfidenceLevel,
+    } from "$lib/confidence";
     import { browser } from "$app/environment";
     import type { Snippet } from "svelte";
 
@@ -26,15 +31,23 @@
     interface MarkDoneTopic {
         key?: string;
         title: string;
-        currentConfidence: number;
+        currentConfidence: ConfidenceLevel;
+    }
+
+    type ConfidenceInput = number | string | null | undefined;
+
+    interface MarkDoneTopicInput {
+        key?: string;
+        title: string;
+        currentConfidence: ConfidenceInput;
     }
 
     interface Props {
         topicTitle?: string;
-        currentConfidence?: number;
-        topics?: MarkDoneTopic[];
+        currentConfidence?: ConfidenceInput;
+        topics?: MarkDoneTopicInput[];
         onSelect: (
-            confidence: number,
+            confidence: ConfidenceLevel,
             topic: MarkDoneTopic,
             index: number,
         ) => void | Promise<unknown>;
@@ -43,7 +56,7 @@
 
     let {
         topicTitle = "",
-        currentConfidence = 0,
+        currentConfidence = 1,
         topics = [],
         onSelect,
         children,
@@ -53,8 +66,18 @@
     // Both Dialog.Root and Drawer.Root accept `open` as a bindable prop.
     let open = $state(false);
 
-    const incomingTargets = $derived(
-        topics.length > 0 ? topics : [{ title: topicTitle, currentConfidence }],
+    const selectedClass =
+        "border-primary bg-primary/10 text-foreground dark:border-primary dark:bg-primary/15";
+
+    const incomingTargets: MarkDoneTopic[] = $derived(
+        (
+            topics.length > 0
+                ? topics
+                : [{ title: topicTitle, currentConfidence }]
+        ).map((topic) => ({
+            ...topic,
+            currentConfidence: toConfidenceLevel(topic.currentConfidence),
+        })),
     );
     let reviewTargets: MarkDoneTopic[] = $state([]);
     const targets = $derived(open ? reviewTargets : incomingTargets);
@@ -81,7 +104,7 @@
 
     let isSaving = $state(false);
     let activeIndex = $state(0);
-    let selectedConfidences: number[] = $state([]);
+    let selectedConfidences: ConfidenceLevel[] = $state([]);
     let topicScroller: HTMLDivElement | null = $state(null);
     let wasOpen = $state(false);
 
@@ -103,7 +126,7 @@
         wasOpen = open;
     });
 
-    async function handleSelect(level: number) {
+    async function handleSelect(level: ConfidenceLevel) {
         if (isSaving) return;
 
         isSaving = true;
@@ -118,7 +141,7 @@
         }
     }
 
-    function setSelectedConfidence(index: number, level: number) {
+    function setSelectedConfidence(index: number, level: ConfidenceLevel) {
         const next = [...selectedConfidences];
         next[index] = level;
         selectedConfidences = next;
@@ -152,7 +175,7 @@
         activeIndex = nextIndex;
     }
 
-    function handleGroupSelect(index: number, level: number) {
+    function handleGroupSelect(index: number, level: ConfidenceLevel) {
         const topic = targets[index];
         if (!topic || isSaving) return;
 
@@ -231,7 +254,7 @@
                         </p>
                         <div class="flex flex-col gap-1.5">
                             {#each confidenceLabels as label, i (label)}
-                                {@const level = i + 1}
+                                {@const level = toConfidenceLevel(i + 1)}
                                 <Button
                                     variant="outline"
                                     class={cn(
@@ -239,7 +262,7 @@
                                         level ===
                                             (selectedConfidences[index] ??
                                                 topic.currentConfidence) &&
-                                            "border-primary bg-primary/5",
+                                            selectedClass,
                                     )}
                                     disabled={isSaving}
                                     onclick={() =>
@@ -295,13 +318,13 @@
             </p>
             <div class="flex flex-col gap-1.5">
                 {#each confidenceLabels as label, i (label)}
-                    {@const level = i + 1}
+                    {@const level = toConfidenceLevel(i + 1)}
                     <Button
                         variant="outline"
                         class={cn(
                             "h-auto w-full justify-start gap-3 px-3 py-2.5",
                             level === targets[0]?.currentConfidence &&
-                                "border-primary bg-primary/5",
+                                selectedClass,
                         )}
                         disabled={isSaving}
                         onclick={() => handleSelect(level)}
