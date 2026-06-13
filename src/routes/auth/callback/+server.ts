@@ -1,7 +1,7 @@
 import { redirect } from "@sveltejs/kit";
+import type { RequestHandler } from "./$types";
 import { WorkOS } from "@workos-inc/node";
 import { WORKOS_API_KEY, WORKOS_CLIENT_ID, ORIGIN } from "$env/static/private";
-import type { RequestHandler } from "./$types";
 
 const workos = new WorkOS(WORKOS_API_KEY);
 const isProduction = ORIGIN.startsWith("https://");
@@ -24,7 +24,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
     httpOnly: true,
     secure: isProduction,
     sameSite: "lax",
-    maxAge: 60 * 60, // 1 hour
+    maxAge: 60 * 60,
   });
 
   cookies.set("workos_refresh_token", refreshToken, {
@@ -32,8 +32,17 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
     httpOnly: true,
     secure: isProduction,
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 30, // 30 days
+    maxAge: 60 * 60 * 24 * 30,
   });
+
+  const callbackUrl = cookies.get("auth_callback_url");
+  if (callbackUrl) {
+    cookies.delete("auth_callback_url", { path: "/" });
+    throw redirect(
+      302,
+      `/auth?callback_url=${encodeURIComponent(callbackUrl)}`,
+    );
+  }
 
   throw redirect(302, "/");
 };
