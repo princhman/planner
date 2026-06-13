@@ -1,6 +1,6 @@
 import { httpRouter } from "convex/server";
 import { authKit } from "./auth";
-import { encryptUser, type User } from "./encrypt";
+import { encryptUser } from "./encryptAction";
 
 const http = httpRouter();
 
@@ -58,14 +58,16 @@ http.route({
     }
 
     // Prepare user data with company defaulting to a B2C placeholder
-    const userData: User = {
+    const userData = {
       email: user.email,
       name: user.name || "",
       company: "Personal", // Default company for B2C
     };
 
-    // Encrypt user data
-    const encryptedUser = encryptUser(userData);
+    // Encrypt user data via action
+    const encryptedUser = await ctx.runAction(encryptUser, {
+      user: userData,
+    });
 
     // Redirect to callback URL with encrypted user data
     const redirectUrl = new URL(callbackUrl);
