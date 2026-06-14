@@ -1,5 +1,5 @@
-/// <reference types="node" />
-
+import fs from "node:fs";
+import path from "node:path";
 import crypto from "node:crypto";
 import { env } from "$env/dynamic/private";
 
@@ -9,24 +9,41 @@ export type AuthUser = {
   company: string;
 };
 
-function getKey(): Buffer {
-  const privateKey = env.PRIVATE_KEY;
-  if (!privateKey) {
-    throw new Error("PRIVATE_KEY environment variable is not set");
+function normalizePem(value: string): string {
+  return value.replace(/\\n/g, "\n").trim();
+}
+
+function readPrivateKeyPem(): string {
+  if (env.PRIVATE_KEY) {
+    return normalizePem(env.PRIVATE_KEY);
   }
 
-  return crypto.createHash("sha256").update(privateKey).digest();
+  const pemPath = path.resolve("private.pem");
+  if (fs.existsSync(pemPath)) {
+    return normalizePem(fs.readFileSync(pemPath, "utf8"));
+  }
+
+  throw new Error("Missing PRIVATE_KEY env var and private.pem file");
+}
+
+function getEncryptionPublicKey(): crypto.KeyLike {
+  const configuredPublicKey = env.JWT_ENCRYPTION_PUBLIC_KEY;
+  if (configuredPublicKey) {
+    return normalizePem(configuredPublicKey);
+  }
+
+  return crypto.createPublicKey(readPrivateKeyPem());
 }
 
 export function encryptAuthUser(user: AuthUser): string {
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv("aes-256-gcm", getKey(), iv);
+  const encrypted = crypto.publicEncrypt(
+    {
+      key: getEncryptionPublicKey(),
+      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: "sha256",
+    },
+    Buffer.from(JSON.stringify(user), "utf8"),
+  );
 
-  const ciphertext = Buffer.concat([
-    cipher.update(JSON.stringify(user), "utf8"),
-    cipher.final(),
-  ]);
-  const tag = cipher.getAuthTag();
-
-  return Buffer.concat([iv, tag, ciphertext]).toString("base64");
+  return encrypted.toString("base64url");
 }
