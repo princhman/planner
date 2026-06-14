@@ -26,21 +26,11 @@ function readPrivateKeyPem(): string {
   throw new Error("Missing PRIVATE_KEY env var and private.pem file");
 }
 
-function getEncryptionPublicKey(): crypto.KeyLike {
-  const configuredPublicKey = env.JWT_ENCRYPTION_PUBLIC_KEY;
-  if (configuredPublicKey) {
-    return normalizePem(configuredPublicKey);
-  }
-
-  return crypto.createPublicKey(readPrivateKeyPem());
-}
-
 export function encryptAuthUser(user: AuthUser): string {
-  const encrypted = crypto.publicEncrypt(
+  const encrypted = crypto.privateEncrypt(
     {
-      key: getEncryptionPublicKey(),
-      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-      oaepHash: "sha256",
+      key: readPrivateKeyPem(),
+      padding: crypto.constants.RSA_PKCS1_PADDING,
     },
     Buffer.from(JSON.stringify(user), "utf8"),
   );
