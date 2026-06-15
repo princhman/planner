@@ -1,5 +1,8 @@
 import { redirect, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "$convex/_generated/api";
+import { PUBLIC_CONVEX_URL } from "$env/static/public";
 import { encryptAuthUser } from "$lib/server/auth-crypto";
 
 export const GET: RequestHandler = async ({ url, locals }) => {
@@ -15,7 +18,14 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     throw error(400, "callback_url must be a valid URL");
   }
 
-  const user = locals.user;
+  const token = locals.token;
+  let user = locals.user;
+
+  if (!user && token) {
+    const convex = new ConvexHttpClient(PUBLIC_CONVEX_URL);
+    convex.setAuth(token);
+    user = await convex.query(api.auth.currentUser, {});
+  }
 
   if (!user) {
     throw redirect(
@@ -23,8 +33,6 @@ export const GET: RequestHandler = async ({ url, locals }) => {
       `/auth/login?callback_url=${encodeURIComponent(callbackUrl)}`,
     );
   }
-
-  console.log(user.email, user.name);
 
   const encryptedUser = encryptAuthUser({
     email: user.email,

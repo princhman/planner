@@ -1,6 +1,6 @@
 import { AuthKit, type AuthFunctions } from "@convex-dev/workos-authkit";
 import { components, internal } from "./_generated/api";
-import type { QueryCtx, MutationCtx } from "./_generated/server";
+import { query, type QueryCtx, type MutationCtx } from "./_generated/server";
 import type { DataModel } from "./_generated/dataModel";
 
 const authFunctions: AuthFunctions = internal.auth;
@@ -65,3 +65,10 @@ export async function getAuthUserOrThrow(ctx: MutationCtx) {
   if (!user) throw new Error("Not authenticated");
   return user;
 }
+
+export const currentUser = query({
+  args: {},
+  handler: async (ctx) => {
+    return await getAuthUser(ctx);
+  },
+});
