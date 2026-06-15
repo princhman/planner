@@ -24,6 +24,8 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     );
   }
 
+  console.log(user.email, user.name);
+
   const encryptedUser = encryptAuthUser({
     email: user.email,
     name: user.name ?? "",
