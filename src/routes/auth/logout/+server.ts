@@ -6,12 +6,12 @@
 
 import { redirect } from "@sveltejs/kit";
 import { WorkOS } from "@workos-inc/node";
-import { WORKOS_API_KEY, WORKOS_CLIENT_ID, ORIGIN } from "$env/static/private";
+import { env } from "$env/dynamic/private";
 import type { RequestHandler } from "./$types";
 
-const workos = new WorkOS(WORKOS_API_KEY);
+const workos = new WorkOS(env.WORKOS_API_KEY);
 
-export const GET: RequestHandler = async ({ cookies }) => {
+export const GET: RequestHandler = async ({ cookies, url }) => {
   const token = cookies.get("workos_access_token");
 
   cookies.delete("workos_access_token", { path: "/" });
@@ -23,7 +23,7 @@ export const GET: RequestHandler = async ({ cookies }) => {
       if (payload.sid) {
         const logoutUrl = workos.userManagement.getLogoutUrl({
           sessionId: payload.sid,
-          returnTo: ORIGIN,
+          returnTo: url.origin,
         });
         throw redirect(302, logoutUrl);
       }

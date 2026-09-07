@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "quextro-planner-production",
+  "main": ".svelte-kit/cloudflare/_worker.js",
+  "compatibility_date": "2026-09-07",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "planner.quextro.com",
+      "custom_domain": true
+    }
+  ],
+  "vars": {
+    "PUBLIC_CONVEX_URL": "https://friendly-greyhound-68.eu-west-1.convex.cloud",
+    "WORKOS_CLIENT_ID": "client_01KN9T9XPPVZVHDPZZDXMT0KAP"
+  },
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".svelte-kit/cloudflare"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "upload_source_maps": true
+}

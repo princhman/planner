@@ -13,10 +13,9 @@
 
 import type { Handle } from "@sveltejs/kit";
 import { WorkOS } from "@workos-inc/node";
-import { WORKOS_API_KEY, WORKOS_CLIENT_ID, ORIGIN } from "$env/static/private";
+import { env } from "$env/dynamic/private";
 
-const workos = new WorkOS(WORKOS_API_KEY);
-const isProduction = ORIGIN.startsWith("https://");
+const workos = new WorkOS(env.WORKOS_API_KEY);
 
 function decodeAndCheck(token: string): { payload: Record<string, string>; expired: boolean } | null {
   try {
@@ -40,6 +39,7 @@ function extractUser(payload: Record<string, string>) {
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
+  const isProduction = event.url.protocol === "https:";
   let token = event.cookies.get("workos_access_token") ?? null;
   const refreshToken = event.cookies.get("workos_refresh_token") ?? null;
 
@@ -47,7 +47,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   if ((!token || decodeAndCheck(token)?.expired) && refreshToken) {
     try {
       const result = await workos.userManagement.authenticateWithRefreshToken({
-        clientId: WORKOS_CLIENT_ID,
+        clientId: env.WORKOS_CLIENT_ID,
         refreshToken,
       });
 

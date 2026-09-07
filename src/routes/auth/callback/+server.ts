@@ -1,12 +1,12 @@
 import { redirect } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { WorkOS } from "@workos-inc/node";
-import { WORKOS_API_KEY, WORKOS_CLIENT_ID, ORIGIN } from "$env/static/private";
+import { env } from "$env/dynamic/private";
 
-const workos = new WorkOS(WORKOS_API_KEY);
-const isProduction = ORIGIN.startsWith("https://");
+const workos = new WorkOS(env.WORKOS_API_KEY);
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
+  const isProduction = url.protocol === "https:";
   const code = url.searchParams.get("code");
 
   if (!code) {
@@ -15,7 +15,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
   const { accessToken, refreshToken } =
     await workos.userManagement.authenticateWithCode({
-      clientId: WORKOS_CLIENT_ID,
+      clientId: env.WORKOS_CLIENT_ID,
       code,
     });
 

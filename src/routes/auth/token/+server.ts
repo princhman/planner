@@ -6,11 +6,10 @@
 
 import { json } from "@sveltejs/kit";
 import { WorkOS } from "@workos-inc/node";
-import { WORKOS_API_KEY, WORKOS_CLIENT_ID, ORIGIN } from "$env/static/private";
+import { env } from "$env/dynamic/private";
 import type { RequestHandler } from "./$types";
 
-const workos = new WorkOS(WORKOS_API_KEY);
-const isProduction = ORIGIN.startsWith("https://");
+const workos = new WorkOS(env.WORKOS_API_KEY);
 
 function isTokenExpired(token: string): boolean {
   try {
@@ -22,7 +21,8 @@ function isTokenExpired(token: string): boolean {
   }
 }
 
-export const GET: RequestHandler = async ({ cookies }) => {
+export const GET: RequestHandler = async ({ cookies, url }) => {
+  const isProduction = url.protocol === "https:";
   const accessToken = cookies.get("workos_access_token");
   const refreshToken = cookies.get("workos_refresh_token");
 
@@ -35,7 +35,7 @@ export const GET: RequestHandler = async ({ cookies }) => {
   if (refreshToken) {
     try {
       const result = await workos.userManagement.authenticateWithRefreshToken({
-        clientId: WORKOS_CLIENT_ID,
+        clientId: env.WORKOS_CLIENT_ID,
         refreshToken,
       });
 

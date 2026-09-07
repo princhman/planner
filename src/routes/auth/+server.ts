@@ -2,7 +2,7 @@ import { redirect, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "$convex/_generated/api";
-import { PUBLIC_CONVEX_URL } from "$env/static/public";
+import { env } from "$env/dynamic/public";
 import { encryptAuthUser } from "$lib/server/auth-crypto";
 
 export const GET: RequestHandler = async ({ url, locals }) => {
@@ -22,9 +22,16 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   let user = locals.user;
 
   if (!user && token) {
-    const convex = new ConvexHttpClient(PUBLIC_CONVEX_URL);
+    const convex = new ConvexHttpClient(env.PUBLIC_CONVEX_URL);
     convex.setAuth(token);
-    user = await convex.query(api.auth.currentUser, {});
+    const currentUser = await convex.query(api.auth.currentUser, {});
+    user = currentUser
+      ? {
+          id: currentUser.workosId ?? currentUser._id,
+          email: currentUser.email,
+          name: currentUser.name ?? null,
+        }
+      : null;
   }
 
   if (!user) {

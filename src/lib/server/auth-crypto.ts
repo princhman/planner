@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import crypto from "node:crypto";
 import { env } from "$env/dynamic/private";
 
@@ -18,12 +16,7 @@ function readPrivateKeyPem(): string {
     return normalizePem(env.PRIVATE_KEY);
   }
 
-  const pemPath = path.resolve("private.pem");
-  if (fs.existsSync(pemPath)) {
-    return normalizePem(fs.readFileSync(pemPath, "utf8"));
-  }
-
-  throw new Error("Missing PRIVATE_KEY env var and private.pem file");
+  throw new Error("Missing PRIVATE_KEY environment variable");
 }
 
 export function encryptAuthUser(user: AuthUser): string {
