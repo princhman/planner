@@ -1,11 +1,9 @@
 import { redirect } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { WorkOS } from "@workos-inc/node";
-import { env } from "$env/dynamic/private";
-
-const workos = new WorkOS(env.WORKOS_API_KEY);
+import { getWorkOS } from "$lib/server/workos";
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
+  const { client, clientId } = getWorkOS();
   const isProduction = url.protocol === "https:";
   const callbackUrl = url.searchParams.get("callback_url");
 
@@ -19,9 +17,9 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
     });
   }
 
-  const authorizationUrl = workos.userManagement.getAuthorizationUrl({
+  const authorizationUrl = client.userManagement.getAuthorizationUrl({
     provider: "authkit",
-    clientId: env.WORKOS_CLIENT_ID,
+    clientId,
     redirectUri: `${url.origin}/auth/callback`,
   });
 

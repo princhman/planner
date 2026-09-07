@@ -5,11 +5,8 @@
 // to get a new one from WorkOS.
 
 import { json } from "@sveltejs/kit";
-import { WorkOS } from "@workos-inc/node";
-import { env } from "$env/dynamic/private";
+import { getWorkOS } from "$lib/server/workos";
 import type { RequestHandler } from "./$types";
-
-const workos = new WorkOS(env.WORKOS_API_KEY);
 
 function isTokenExpired(token: string): boolean {
   try {
@@ -34,8 +31,9 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
   // If we have a refresh token, use it to get a new access token
   if (refreshToken) {
     try {
-      const result = await workos.userManagement.authenticateWithRefreshToken({
-        clientId: env.WORKOS_CLIENT_ID,
+      const { client, clientId } = getWorkOS();
+      const result = await client.userManagement.authenticateWithRefreshToken({
+        clientId,
         refreshToken,
       });
 

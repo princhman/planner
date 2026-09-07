@@ -1,11 +1,9 @@
 import { redirect } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { WorkOS } from "@workos-inc/node";
-import { env } from "$env/dynamic/private";
-
-const workos = new WorkOS(env.WORKOS_API_KEY);
+import { getWorkOS } from "$lib/server/workos";
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
+  const { client, clientId } = getWorkOS();
   const isProduction = url.protocol === "https:";
   const code = url.searchParams.get("code");
 
@@ -14,8 +12,8 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
   }
 
   const { accessToken, refreshToken } =
-    await workos.userManagement.authenticateWithCode({
-      clientId: env.WORKOS_CLIENT_ID,
+    await client.userManagement.authenticateWithCode({
+      clientId,
       code,
     });
 

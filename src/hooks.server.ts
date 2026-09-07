@@ -12,10 +12,7 @@
 // show the UI but all Convex queries/mutations would reject it.
 
 import type { Handle } from "@sveltejs/kit";
-import { WorkOS } from "@workos-inc/node";
-import { env } from "$env/dynamic/private";
-
-const workos = new WorkOS(env.WORKOS_API_KEY);
+import { getWorkOS } from "$lib/server/workos";
 
 function decodeAndCheck(token: string): { payload: Record<string, string>; expired: boolean } | null {
   try {
@@ -46,8 +43,9 @@ export const handle: Handle = async ({ event, resolve }) => {
   // Try to refresh if the access token is missing or expired
   if ((!token || decodeAndCheck(token)?.expired) && refreshToken) {
     try {
-      const result = await workos.userManagement.authenticateWithRefreshToken({
-        clientId: env.WORKOS_CLIENT_ID,
+      const { client, clientId } = getWorkOS();
+      const result = await client.userManagement.authenticateWithRefreshToken({
+        clientId,
         refreshToken,
       });
 

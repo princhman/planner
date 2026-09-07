@@ -5,11 +5,8 @@
 //    (otherwise WorkOS auto-logs you back in next time)
 
 import { redirect } from "@sveltejs/kit";
-import { WorkOS } from "@workos-inc/node";
-import { env } from "$env/dynamic/private";
+import { getWorkOS } from "$lib/server/workos";
 import type { RequestHandler } from "./$types";
-
-const workos = new WorkOS(env.WORKOS_API_KEY);
 
 export const GET: RequestHandler = async ({ cookies, url }) => {
   const token = cookies.get("workos_access_token");
@@ -21,7 +18,8 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
       if (payload.sid) {
-        const logoutUrl = workos.userManagement.getLogoutUrl({
+        const { client } = getWorkOS();
+        const logoutUrl = client.userManagement.getLogoutUrl({
           sessionId: payload.sid,
           returnTo: url.origin,
         });
