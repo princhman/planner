@@ -4,13 +4,13 @@
 
     import "./layout.css";
 
-    import { env } from "$env/dynamic/public";
     import { setupConvex, useConvexClient } from "convex-svelte";
     import { Toaster } from "$lib/components/ui/sonner/index.js";
+    import { getPublicConvexUrl } from "$lib/public-env";
 
     const { children, data } = $props();
 
-    setupConvex(env.PUBLIC_CONVEX_URL);
+    setupConvex(getPublicConvexUrl());
 
     const client = useConvexClient();
 

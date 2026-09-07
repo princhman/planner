@@ -2,8 +2,8 @@ import { redirect, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "$convex/_generated/api";
-import { env } from "$env/dynamic/public";
 import { encryptAuthUser } from "$lib/server/auth-crypto";
+import { getPublicConvexUrl } from "$lib/public-env";
 
 export const GET: RequestHandler = async ({ url, locals }) => {
   const callbackUrl = url.searchParams.get("callback_url");
@@ -22,7 +22,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   let user = locals.user;
 
   if (!user && token) {
-    const convex = new ConvexHttpClient(env.PUBLIC_CONVEX_URL);
+    const convex = new ConvexHttpClient(getPublicConvexUrl());
     convex.setAuth(token);
     const currentUser = await convex.query(api.auth.currentUser, {});
     user = currentUser

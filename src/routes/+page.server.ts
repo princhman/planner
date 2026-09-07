@@ -1,13 +1,13 @@
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "$convex/_generated/api";
-import { env } from "$env/dynamic/public";
+import { getPublicConvexUrl } from "$lib/public-env";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals }) => {
   if (!locals.token)
     return { initialCourses: null, initialRecommendations: null };
 
-  const convex = new ConvexHttpClient(env.PUBLIC_CONVEX_URL);
+  const convex = new ConvexHttpClient(getPublicConvexUrl());
   convex.setAuth(locals.token);
 
   const [courses, recommendations] = await Promise.all([
