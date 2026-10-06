@@ -1,7 +1,6 @@
 # Quextro Planner
 
-SvelteKit application deployed as a Cloudflare Worker, with Convex providing the
-database and realtime backend and WorkOS providing authentication.
+Spaced repetition planner with topics. Live at https://planner.quextro.com/.
 
 ## Development
 
